@@ -1,0 +1,84 @@
+﻿@model InTouch.MVC.ViewModels.VideosIndexViewModel
+@{
+    ViewData["Title"] = "Videos";
+}
+
+<div class="container">
+    <div class="row mb-4">
+        <div class="col">
+            <h1 class="mb-3">Videos</h1>
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <a asp-controller="Videos" asp-action="Upload" class="btn btn-primary">
+                        <i class="bi bi-upload"></i> Upload Video
+                    </a>
+                </div>
+                <div class="dropdown">
+                    <button class="btn btn-outline-secondary dropdown-toggle" type="button" id="sortDropdown"
+                            data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="bi bi-sort-down"></i>
+                        @(Model.SortBy == "popularity" ? "Most Popular" : "Most Recent")
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="sortDropdown">
+                        <li>
+                            <a class="dropdown-item @(Model.SortBy == "date" ? "active" : "")"
+                               asp-action="Index" asp-route-sortBy="date">Most Recent</a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item @(Model.SortBy == "popularity" ? "active" : "")"
+                               asp-action="Index" asp-route-sortBy="popularity">Most Popular</a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @if (Model.Videos != null && Model.Videos.Any())
+    {
+        <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+            @foreach (var video in Model.Videos)
+            {
+                <div class="col">
+                    <div class="card shadow-sm h-100">
+                        <div class="position-relative">
+                            <img src="@(string.IsNullOrEmpty(video.ThumbnailUrl) ? "/images/default-video-thumbnail.jpg" : video.ThumbnailUrl)"
+                                 class="card-img-top" alt="@video.Title" style="height: 180px; object-fit: cover;">
+                            <a asp-action="Details" asp-route-id="@video.Id"
+                               class="position-absolute top-50 start-50 translate-middle text-white">
+                                <i class="bi bi-play-circle" style="font-size: 3rem; text-shadow: 0 0 5px rgba(0,0,0,0.5);"></i>
+                            </a>
+                            <span class="position-absolute bottom-0 end-0 bg-dark text-white px-2 py-1 m-2 rounded">
+                                <i class="bi bi-eye"></i> @video.Views
+                            </span>
+                        </div>
+                        <div class="card-body">
+                            <h5 class="card-title">
+                                <a asp-action="Details" asp-route-id="@video.Id" class="text-decoration-none">
+                                    @video.Title
+                                </a>
+                            </h5>
+                            <div class="d-flex align-items-center mb-2">
+                                <img src="@(string.IsNullOrEmpty(video.User?.ProfilePicture) ? "/images/default-profile.jpg" : video.User?.ProfilePicture)"
+                                     class="rounded-circle me-2" alt="Profile" style="width: 30px; height: 30px; object-fit: cover;">
+                                <a asp-controller="Account" asp-action="ViewProfile" asp-route-id="@video.UserId" class="text-decoration-none">
+                                    @(video.User != null ? $"{video.User.FirstName} {video.User.LastName}" : "Unknown User")
+                                </a>
+                            </div>
+                            <p class="card-text text-muted small mb-0">
+                                <i class="bi bi-calendar3"></i> @video.UploadDate.ToString("MMM d, yyyy")
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+    else
+    {
+        <div class="alert alert-info">
+            <i class="bi bi-info-circle me-2"></i> No videos available.
+            <a asp-controller="Videos" asp-action="Upload" class="alert-link">Upload</a> your first video!
+        </div>
+    }
+</div>

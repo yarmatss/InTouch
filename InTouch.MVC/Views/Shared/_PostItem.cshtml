@@ -1,0 +1,105 @@
+﻿@model InTouch.MVC.Models.Post
+@inject UserManager<ApplicationUser> UserManager
+
+@{
+    var currentUserId = UserManager.GetUserId(User);
+    var hasLiked = Model.Likes.Any(l => l.UserId == currentUserId);
+}
+
+<div class="card mb-3 shadow-sm">
+    <div class="card-header bg-white">
+        <div class="d-flex align-items-center">
+            <img src="@(string.IsNullOrEmpty(Model.User?.ProfilePicture) ? "/images/default-profile.jpg" : Model.User?.ProfilePicture)"
+                 class="rounded-circle me-2" alt="Profile" style="width: 40px; height: 40px; object-fit: cover;" />
+            <div>
+                <a asp-controller="Account" asp-action="ViewProfile" asp-route-id="@Model.UserId" class="text-decoration-none fw-bold">
+                    @(Model.User != null ? $"{Model.User.FirstName} {Model.User.LastName}" : "Unknown User")
+                </a>
+                <div class="text-muted small">
+                    @Model.CreatedAt.ToString("MMM d, yyyy h:mm tt")
+                    @if (Model.UpdatedAt.HasValue)
+                    {
+                        <span class="ms-2">(edited)</span>
+                    }
+                </div>
+            </div>
+
+            @if (currentUserId == Model.UserId)
+            {
+                <div class="dropdown ms-auto">
+                    <button class="btn btn-sm btn-light" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="bi bi-three-dots-vertical"></i>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li>
+                            <a asp-controller="Posts" asp-action="Edit" asp-route-id="@Model.Id" class="dropdown-item">Edit</a>
+                        </li>
+                        <li>
+                            <form asp-controller="Posts" asp-action="Delete" asp-route-id="@Model.Id" method="post"
+                                  onsubmit="return confirm('Are you sure you want to delete this post?');">
+                                <button type="submit" class="dropdown-item text-danger">Delete</button>
+                            </form>
+                        </li>
+                    </ul>
+                </div>
+            }
+        </div>
+    </div>
+    <div class="card-body">
+        <p class="card-text">@Model.Content</p>
+
+        @if (!string.IsNullOrEmpty(Model.MediaUrl))
+        {
+            <div class="mt-2">
+                @if (Model.MediaType == MediaType.Image)
+                {
+                    <img src="@Model.MediaUrl" class="img-fluid rounded" alt="Post image" />
+                }
+                else
+                {
+                    <video controls class="w-100 rounded">
+                        <source src="@Model.MediaUrl" type="video/mp4">
+                        Your browser does not support the video tag.
+                    </video>
+                }
+            </div>
+        }
+
+        <div class="d-flex justify-content-between align-items-center mt-3">
+            <div>
+                <span class="me-2"><i class="bi bi-hand-thumbs-up"></i> @Model.Likes.Count</span>
+                <span><i class="bi bi-chat"></i> @Model.Comments.Count</span>
+            </div>
+            <a asp-controller="Posts" asp-action="Details" asp-route-id="@Model.Id" class="btn btn-sm btn-outline-primary">
+                View Details
+            </a>
+        </div>
+    </div>
+    <div class="card-footer bg-white">
+        <div class="d-flex">
+            @if (User.Identity!.IsAuthenticated)
+            {
+                if (!hasLiked)
+                {
+                    <form asp-controller="Posts" asp-action="Like" asp-route-id="@Model.Id" method="post" class="me-3">
+                        <button type="submit" class="btn btn-link text-decoration-none p-0">
+                            <i class="bi bi-hand-thumbs-up"></i> Like
+                        </button>
+                    </form>
+                }
+                else
+                {
+                    <form asp-controller="Posts" asp-action="Unlike" asp-route-id="@Model.Id" method="post" class="me-3">
+                        <button type="submit" class="btn btn-link text-decoration-none p-0 text-primary">
+                            <i class="bi bi-hand-thumbs-up-fill"></i> Liked
+                        </button>
+                    </form>
+                }
+            }
+
+            <a asp-controller="Posts" asp-action="Details" asp-route-id="@Model.Id" class="btn btn-link text-decoration-none p-0">
+                <i class="bi bi-chat"></i> Comment
+            </a>
+        </div>
+    </div>
+</div>

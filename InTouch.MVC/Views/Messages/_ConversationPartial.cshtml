@@ -1,0 +1,109 @@
+﻿@model InTouch.MVC.ViewModels.ConversationViewModel
+
+<div class="card shadow-sm">
+    <div class="card-header bg-white">
+        <div class="d-flex align-items-center">
+            <img src="@(string.IsNullOrEmpty(Model.OtherUser.ProfilePicture) ? "/images/default-profile.jpg" : Model.OtherUser.ProfilePicture)"
+                 class="rounded-circle me-2" alt="Profile" style="width: 40px; height: 40px; object-fit: cover;" />
+            <div>
+                <h5 class="mb-0">@Model.OtherUser.FirstName @Model.OtherUser.LastName</h5>
+                <div id="typingIndicator" class="small text-muted" style="display: none;">
+                    <i class="bi bi-three-dots"></i> typing...
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card-body p-0">
+        <div id="messageContainer" class="overflow-auto p-3" style="height: 400px;">
+            @if (Model.Messages.Any())
+            {
+                var previousDate = DateTime.MinValue;
+
+                foreach (var message in Model.Messages)
+                {
+                    var isCurrentUser = message.SenderId == User.Identity!.Name;
+
+                    // Show date header if it's a different day
+                    if (message.SentAt.Date != previousDate.Date)
+                    {
+                        <div class="text-center my-3">
+                            <span class="badge bg-light text-dark">
+                                @message.SentAt.ToString("MMMM d, yyyy")
+                            </span>
+                        </div>
+                        previousDate = message.SentAt;
+                    }
+
+                    <div class="d-flex @(isCurrentUser ? "justify-content-end" : "justify-content-start") mb-2">
+                        <div class="message @(isCurrentUser ? "message-sent" : "message-received")" data-id="@message.Id">
+                            <div class="message-content">
+                                @message.Content
+                            </div>
+                            <div class="message-time">
+                                @message.SentAt.ToString("h:mm tt")
+                                @if (isCurrentUser && message.IsRead)
+                                {
+                                    <span class="ms-1"><i class="bi bi-check2-all text-primary"></i></span>
+                                }
+                                else if (isCurrentUser)
+                                {
+                                    <span class="ms-1"><i class="bi bi-check2"></i></span>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                }
+            }
+            else
+            {
+                <div class="text-center p-5">
+                    <p class="text-muted">No messages yet. Send a message to start the conversation!</p>
+                </div>
+            }
+        </div>
+    </div>
+
+    <div class="card-footer bg-white">
+        <form id="messageForm" class="d-flex">
+            <input type="hidden" id="receiverId" value="@Model.OtherUser.Id" />
+            <input type="text" id="messageInput" class="form-control me-2" placeholder="Type a message..." autocomplete="off" />
+            <button type="submit" class="btn btn-primary">
+                <i class="bi bi-send"></i>
+            </button>
+        </form>
+    </div>
+</div>
+
+@section Styles {
+    <style>
+        .message {
+            max-width: 70%;
+            padding: 10px 15px;
+            border-radius: 18px;
+            margin-bottom: 5px;
+            position: relative;
+        }
+
+        .message-sent {
+            background-color: #0d6efd;
+            color: white;
+            border-bottom-right-radius: 5px;
+            align-self: flex-end;
+        }
+
+        .message-received {
+            background-color: #f0f2f5;
+            color: #212529;
+            border-bottom-left-radius: 5px;
+            align-self: flex-start;
+        }
+
+        .message-time {
+            font-size: 0.7rem;
+            opacity: 0.8;
+            margin-top: 2px;
+            text-align: right;
+        }
+    </style>
+}

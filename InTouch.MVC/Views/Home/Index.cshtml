@@ -1,0 +1,43 @@
+﻿@{
+    ViewData["Title"] = "Welcome to InTouch";
+}
+
+<div class="text-center">
+    <h1 class="display-4 mb-4">Welcome to InTouch</h1>
+    <p class="lead mb-5">Connect with friends, share moments, and discover new content.</p>
+
+    <div class="row mb-5">
+        <div class="col-md-4 mb-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-body text-center">
+                    <i class="bi bi-people-fill text-primary" style="font-size: 3rem;"></i>
+                    <h5 class="card-title mt-3">Connect with Friends</h5>
+                    <p class="card-text">Find old friends and make new ones. Share your experiences with people who matter.</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-body text-center">
+                    <i class="bi bi-camera-video-fill text-primary" style="font-size: 3rem;"></i>
+                    <h5 class="card-title mt-3">Share Videos</h5>
+                    <p class="card-text">Upload and discover videos that inspire, entertain, and connect people.</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-body text-center">
+                    <i class="bi bi-music-note-beamed text-primary" style="font-size: 3rem;"></i>
+                    <h5 class="card-title mt-3">Discover Music</h5>
+                    <p class="card-text">Share your favorite tunes and discover new music from friends.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="d-grid gap-2 d-md-block">
+        <a asp-controller="Account" asp-action="Register" class="btn btn-primary btn-lg px-4 me-md-2">Get Started</a>
+        <a asp-controller="Account" asp-action="Login" class="btn btn-outline-primary btn-lg px-4">Sign In</a>
+    </div>
+</div>

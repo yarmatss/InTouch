@@ -1,0 +1,9 @@
+﻿@model InTouch.MVC.Models.ApplicationUser
+
+@{
+    ViewData["Title"] = $"{Model.FirstName} {Model.LastName}";
+    // Using the same Profile view for profile viewing
+    Layout = null;
+}
+
+@await Html.PartialAsync("Profile", Model)

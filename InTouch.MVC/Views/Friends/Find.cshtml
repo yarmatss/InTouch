@@ -1,0 +1,117 @@
+﻿@model InTouch.MVC.ViewModels.FindFriendsViewModel
+@{
+    ViewData["Title"] = "Find Friends";
+}
+
+<div class="container">
+    <div class="row mb-4">
+        <div class="col">
+            <h1 class="mb-3">Find Friends</h1>
+            <div class="d-flex align-items-center mb-4">
+                <a asp-controller="Friends" asp-action="Index" class="btn btn-outline-primary me-2">
+                    <i class="bi bi-people"></i> My Friends
+                </a>
+                <a asp-controller="Friends" asp-action="Requests" class="btn btn-outline-primary me-3">
+                    <i class="bi bi-person-plus"></i> Friend Requests
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <h5 class="card-title mb-3">Search for people</h5>
+            <form asp-controller="Friends" asp-action="Find" method="get">
+                <div class="input-group mb-3">
+                    <input type="text" name="searchTerm" value="@Model.SearchTerm" class="form-control"
+                           placeholder="Search by name or username..." required>
+                    <button class="btn btn-primary" type="submit">
+                        <i class="bi bi-search"></i> Search
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrEmpty(Model.SearchTerm))
+    {
+        if (Model.Results != null && Model.Results.Any())
+        {
+            <h5 class="mb-3">Search results for: <span class="text-primary">@Model.SearchTerm</span></h5>
+            <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+                @foreach (var result in Model.Results)
+                {
+                    <div class="col">
+                        <div class="card shadow-sm h-100">
+                            <div class="card-body">
+                                <div class="d-flex align-items-center mb-3">
+                                    <img src="@(string.IsNullOrEmpty(result.User.ProfilePicture) ? "/images/default-profile.jpg" : result.User.ProfilePicture)"
+                                         class="rounded-circle me-3" alt="Profile" style="width: 64px; height: 64px; object-fit: cover;" />
+                                    <div>
+                                        <h5 class="card-title mb-0">@result.User.FirstName @result.User.LastName</h5>
+                                        <p class="text-muted mb-0">@@@result.User.UserName</p>
+                                    </div>
+                                </div>
+
+                                <div class="mt-3">
+                                    @switch (result.FriendshipStatus)
+                                    {
+                                        case FriendshipStatusEnum.None:
+                                            <form asp-controller="Friends" asp-action="SendRequest" method="post">
+                                                <input type="hidden" name="userId" value="@result.User.Id" />
+                                                <button type="submit" class="btn btn-primary w-100">
+                                                    <i class="bi bi-person-plus"></i> Add Friend
+                                                </button>
+                                            </form>
+                                            break;
+
+                                        case FriendshipStatusEnum.RequestSent:
+                                            <button class="btn btn-secondary w-100" disabled>
+                                                <i class="bi bi-hourglass-split"></i> Request Sent
+                                            </button>
+                                            break;
+
+                                        case FriendshipStatusEnum.RequestReceived:
+                                            <div class="d-flex">
+                                                <form asp-controller="Friends" asp-action="AcceptRequest" method="post" class="pe-1 flex-fill">
+                                                    <input type="hidden" name="friendshipId" value="@ViewData[$"FriendshipId_{result.User.Id}"]" />
+                                                    <button type="submit" class="btn btn-success w-100">
+                                                        <i class="bi bi-check-lg"></i> Accept
+                                                    </button>
+                                                </form>
+                                                <form asp-controller="Friends" asp-action="RejectRequest" method="post" class="ps-1 flex-fill">
+                                                    <input type="hidden" name="friendshipId" value="@ViewData[$"FriendshipId_{result.User.Id}"]" />
+                                                    <button type="submit" class="btn btn-outline-danger w-100">
+                                                        <i class="bi bi-x-lg"></i> Decline
+                                                    </button>
+                                                </form>
+                                            </div>
+                                            break;
+
+                                        case FriendshipStatusEnum.Friends:
+                                            <button class="btn btn-outline-success w-100" disabled>
+                                                <i class="bi bi-person-check"></i> Friends
+                                            </button>
+                                            break;
+                                    }
+                                </div>
+                            </div>
+                            <div class="card-footer bg-white text-center">
+                                <a asp-controller="Account" asp-action="ViewProfile" asp-route-id="@result.User.Id"
+                                   class="btn btn-sm btn-link text-decoration-none">
+                                    View Profile
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+        else
+        {
+            <div class="alert alert-info">
+                <i class="bi bi-info-circle me-2"></i> No users found matching "<strong>@Model.SearchTerm</strong>".
+            </div>
+        }
+    }
+</div>

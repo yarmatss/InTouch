@@ -1,0 +1,101 @@
+﻿@model InTouch.MVC.ViewModels.UploadMusicViewModel
+@{
+    ViewData["Title"] = "Upload Music";
+}
+
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow">
+                <div class="card-header bg-white">
+                    <h2 class="mb-0">Upload Music</h2>
+                </div>
+                <div class="card-body">
+                    <form asp-action="Upload" method="post" enctype="multipart/form-data">
+                        <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+                        <div class="mb-3">
+                            <label asp-for="Title" class="form-label"></label>
+                            <input asp-for="Title" class="form-control" />
+                            <span asp-validation-for="Title" class="text-danger"></span>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label asp-for="Genre" class="form-label"></label>
+                                <input asp-for="Genre" class="form-control" placeholder="e.g., Rock, Pop, Jazz" />
+                                <span asp-validation-for="Genre" class="text-danger"></span>
+                            </div>
+                            <div class="col-md-6">
+                                <label asp-for="MusicFile" class="form-label"></label>
+                                <input asp-for="MusicFile" class="form-control" type="file" accept="audio/*" />
+                                <div class="form-text">Accepted formats: MP3, WAV, OGG (max size: 20MB)</div>
+                                <span asp-validation-for="MusicFile" class="text-danger"></span>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="Description" class="form-label"></label>
+                            <textarea asp-for="Description" class="form-control" rows="3" placeholder="Tell others about your track"></textarea>
+                            <span asp-validation-for="Description" class="text-danger"></span>
+                        </div>
+
+                        <div class="mb-4">
+                            <label asp-for="CoverFile" class="form-label"></label>
+                            <input asp-for="CoverFile" class="form-control" type="file" accept="image/*" />
+                            <div class="form-text">Upload a cover image (optional)</div>
+                            <span asp-validation-for="CoverFile" class="text-danger"></span>
+                        </div>
+
+                        <div id="coverPreviewContainer" class="mb-3" style="display: none;">
+                            <label class="form-label">Cover Preview:</label>
+                            <img id="coverPreview" src="#" alt="Cover preview" class="img-fluid rounded" style="max-height: 200px;" />
+                        </div>
+
+                        <div class="d-flex justify-content-between">
+                            <a asp-action="Index" class="btn btn-outline-secondary">Cancel</a>
+                            <button type="submit" class="btn btn-primary">Upload</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        $(document).ready(function() {
+            // Audio file check
+            $('#MusicFile').on('change', function(event) {
+                const file = event.target.files[0];
+                if (file) {
+                    const validTypes = ['audio/mpeg', 'audio/wav', 'audio/ogg'];
+                    if (!validTypes.includes(file.type)) {
+                        alert('Please select a valid audio file (MP3, WAV, or OGG)');
+                        this.value = '';
+                    } else if (file.size > 20 * 1024 * 1024) { // 20MB
+                        alert('File size exceeds the maximum limit of 20MB');
+                        this.value = '';
+                    }
+                }
+            });
+
+            // Cover preview
+            $('#CoverFile').on('change', function(event) {
+                const file = event.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        $('#coverPreview').attr('src', e.target.result);
+                        $('#coverPreviewContainer').show();
+                    };
+                    reader.readAsDataURL(file);
+                } else {
+                    $('#coverPreviewContainer').hide();
+                }
+            });
+        });
+    </script>
+}

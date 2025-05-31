@@ -1,0 +1,87 @@
+﻿@model InTouch.MVC.ViewModels.UserVideosViewModel
+@{
+    ViewData["Title"] = $"{Model.User.FirstName}'s Videos";
+    var isCurrentUser = User.Identity!.IsAuthenticated && Model.User.UserName == User.Identity.Name;
+}
+
+<div class="container">
+    <div class="row mb-4">
+        <div class="col">
+            <h1 class="mb-3">
+                @if (isCurrentUser)
+                {
+                    <span>My Videos</span>
+                }
+                else
+                {
+                    <span>@Model.User.FirstName's Videos</span>
+                }
+            </h1>
+
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <div>
+                    <a asp-controller="Account" asp-action="ViewProfile" asp-route-id="@Model.User.Id" class="btn btn-outline-primary">
+                        <i class="bi bi-person"></i> View Profile
+                    </a>
+
+                    @if (isCurrentUser)
+                    {
+                        <a asp-action="Upload" class="btn btn-primary ms-2">
+                            <i class="bi bi-upload"></i> Upload Video
+                        </a>
+                    }
+                </div>
+
+                <span class="badge bg-primary rounded-pill">@Model.Videos.Count videos</span>
+            </div>
+        </div>
+    </div>
+
+    @if (Model.Videos.Any())
+    {
+        <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+            @foreach (var video in Model.Videos)
+            {
+                <div class="col">
+                    <div class="card shadow-sm h-100">
+                        <div class="position-relative">
+                            <img src="@(string.IsNullOrEmpty(video.ThumbnailUrl) ? "/images/default-video-thumbnail.jpg" : video.ThumbnailUrl)"
+                                 class="card-img-top" alt="@video.Title" style="height: 180px; object-fit: cover;">
+                            <a asp-action="Details" asp-route-id="@video.Id"
+                               class="position-absolute top-50 start-50 translate-middle text-white">
+                                <i class="bi bi-play-circle" style="font-size: 3rem; text-shadow: 0 0 5px rgba(0,0,0,0.5);"></i>
+                            </a>
+                            <span class="position-absolute bottom-0 end-0 bg-dark text-white px-2 py-1 m-2 rounded">
+                                <i class="bi bi-eye"></i> @video.Views
+                            </span>
+                        </div>
+                        <div class="card-body">
+                            <h5 class="card-title">
+                                <a asp-action="Details" asp-route-id="@video.Id" class="text-decoration-none">
+                                    @video.Title
+                                </a>
+                            </h5>
+                            <p class="card-text text-muted small mb-0">
+                                <i class="bi bi-calendar3"></i> @video.UploadDate.ToString("MMM d, yyyy")
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+    else
+    {
+        <div class="alert alert-info">
+            <i class="bi bi-info-circle me-2"></i>
+            @if (isCurrentUser)
+            {
+                <span>You haven't uploaded any videos yet. <a asp-action="Upload" class="alert-link">Upload your first video!</a></span>
+            }
+            else
+            {
+                <span>@Model.User.FirstName hasn't uploaded any videos yet.</span>
+            }
+        </div>
+    }
+</div>

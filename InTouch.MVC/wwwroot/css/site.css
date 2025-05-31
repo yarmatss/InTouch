@@ -1,0 +1,139 @@
+:root {
+    --bs-primary: #1877f2;
+    --bs-primary-rgb: 24, 119, 242;
+}
+
+html {
+    position: relative;
+    min-height: 100%;
+}
+
+body {
+    margin-bottom: 60px;
+    background-color: #f0f2f5;
+}
+
+.footer {
+    position: absolute;
+    bottom: 0;
+    width: 100%;
+    white-space: nowrap;
+    line-height: 60px;
+    background-color: white;
+}
+
+/* Navbar styling */
+.navbar {
+    padding: 0.5rem 1rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+}
+
+/* Card styling */
+.card {
+    border: none;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.card-header {
+    background-color: #fff;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+/* Chat styling */
+.message {
+    max-width: 70%;
+    padding: 10px 15px;
+    border-radius: 18px;
+    margin-bottom: 5px;
+    position: relative;
+}
+
+.message-sent {
+    background-color: var(--bs-primary);
+    color: white;
+    border-bottom-right-radius: 5px;
+    align-self: flex-end;
+}
+
+.message-received {
+    background-color: #f0f2f5;
+    color: #212529;
+    border-bottom-left-radius: 5px;
+    align-self: flex-start;
+}
+
+.message-time {
+    font-size: 0.7rem;
+    opacity: 0.7;
+    margin-top: 4px;
+    text-align: right;
+    transition: opacity 0.2s ease;
+}
+
+/* Make timestamps more visible on hover */
+.message:hover .message-time {
+    opacity: 1;
+}
+
+/* Add tooltip styling */
+[title] {
+    position: relative;
+    cursor: help;
+}
+
+/* Button hover effects */
+.btn-primary {
+    background-color: var(--bs-primary);
+    border-color: var(--bs-primary);
+}
+
+    .btn-primary:hover, .btn-primary:focus {
+        background-color: #166fe5;
+        border-color: #166fe5;
+    }
+
+.btn-outline-primary {
+    color: var(--bs-primary);
+    border-color: var(--bs-primary);
+}
+
+    .btn-outline-primary:hover, .btn-outline-primary:focus {
+        background-color: var(--bs-primary);
+        border-color: var(--bs-primary);
+        color: white;
+    }
+
+/* Profile page tabs */
+.nav-tabs .nav-link.active {
+    border-color: transparent;
+    border-bottom: 3px solid var(--bs-primary);
+    color: var(--bs-primary);
+    background-color: transparent;
+    font-weight: 600;
+}
+
+.nav-tabs .nav-link {
+    color: #6c757d;
+    border: none;
+    padding: 0.5rem 1rem;
+}
+
+    .nav-tabs .nav-link:hover {
+        border-bottom: 3px solid rgba(24, 119, 242, 0.3);
+    }
+
+/* Custom animations */
+.fade-in {
+    animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}

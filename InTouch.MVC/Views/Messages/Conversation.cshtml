@@ -1,0 +1,179 @@
+﻿@model InTouch.MVC.ViewModels.ConversationViewModel
+@inject UserManager<ApplicationUser> UserManager
+
+@{
+    ViewData["Title"] = $"Chat with {Model.OtherUser.FirstName}";
+    var currentUser = await UserManager.GetUserAsync(User);
+}
+
+<div id="connectionStatus" class="alert alert-info" style="display:none;"></div>
+
+<div class="container">
+    <div class="row">
+        <div class="col-md-4 col-lg-3 mb-4 mb-md-0">
+            <a asp-action="Index" class="btn btn-outline-primary mb-3">
+                <i class="bi bi-arrow-left"></i> All Messages
+            </a>
+
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="position-relative me-3">
+                            <img src="@(string.IsNullOrEmpty(Model.OtherUser.ProfilePicture) ? "/images/default-profile.jpg" : Model.OtherUser.ProfilePicture)"
+                                 class="rounded-circle" alt="Profile" style="width: 64px; height: 64px; object-fit: cover;" />
+
+                            @if (DateTime.Now - Model.LastActive < TimeSpan.FromMinutes(5))
+                            {
+                                <span class="position-absolute bottom-0 end-0 bg-success rounded-circle p-1"
+                                      style="width:12px; height:12px; border: 2px solid white;"></span>
+                            }
+                        </div>
+                        <div>
+                            <h5 class="mb-0">@Model.OtherUser.FirstName @Model.OtherUser.LastName</h5>
+                            <p class="text-muted mb-0">@@@Model.OtherUser.UserName</p>
+                            <small class="text-muted">
+                                @if (DateTime.Now - Model.LastActive < TimeSpan.FromMinutes(5))
+                                {
+                                    <span class="text-success">Online</span>
+                                }
+                                else
+                                {
+                                    <span>Last active @Model.LastActive.ToString("MMM d, h:mm tt")</span>
+                                }
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-8 col-lg-9">
+            <div class="card shadow-sm">
+                <div class="card-header bg-white">
+                    <div class="d-flex align-items-center">
+                        <img src="@(string.IsNullOrEmpty(Model.OtherUser.ProfilePicture) ? "/images/default-profile.jpg" : Model.OtherUser.ProfilePicture)"
+                             class="rounded-circle me-2" alt="Profile" style="width: 40px; height: 40px; object-fit: cover;" />
+                        <div>
+                            <h5 class="mb-0">@Model.OtherUser.FirstName @Model.OtherUser.LastName</h5>
+                            <div id="typingIndicator" class="small text-muted" style="display: none;">
+                                <i class="bi bi-three-dots"></i> typing...
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card-body p-0">
+                    <div id="messageContainer" class="overflow-auto p-3" style="height: 400px;">
+                        @if (Model.Messages.Any())
+                        {
+                            var previousDate = DateTime.MinValue;
+
+                            foreach (var message in Model.Messages)
+                            {
+                                var isCurrentUser = message.SenderId == currentUser!.Id;
+
+                                // Show date header if it's a different day
+                                if (message.SentAt.Date != previousDate.Date)
+                                {
+                                    <div class="text-center my-3">
+                                        <span class="badge bg-light text-dark">
+                                            @message.SentAt.ToString("MMMM d, yyyy")
+                                        </span>
+                                    </div>
+                                    previousDate = message.SentAt;
+                                }
+
+                                <div class="d-flex @(isCurrentUser ? "justify-content-end" : "justify-content-start") mb-2">
+                                    <div class="message @(isCurrentUser ? "message-sent" : "message-received")">
+                                        <div class="message-content">
+                                            @message.Content
+                                        </div>
+                                        <div class="message-time">
+                                            @message.SentAt.ToString("h:mm tt")
+                                            @if (isCurrentUser && message.IsRead)
+                                            {
+                                                <span class="ms-1"><i class="bi bi-check2-all text-primary"></i></span>
+                                            }
+                                            else if (isCurrentUser)
+                                            {
+                                                <span class="ms-1"><i class="bi bi-check2"></i></span>
+                                            }
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        }
+                        else
+                        {
+                            <div class="text-center p-5">
+                                <p class="text-muted">No messages yet. Send a message to start the conversation!</p>
+                            </div>
+                        }
+                    </div>
+                </div>
+
+                <div class="card-footer bg-white">
+                    <form id="messageForm" class="d-flex">
+                        <input type="hidden" id="receiverId" value="@Model.OtherUser.Id" />
+                        <input type="text" id="messageInput" class="form-control me-2" placeholder="Type a message..." autocomplete="off" />
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-send"></i>
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Styles {
+    <style>
+        .message {
+            max-width: 70%;
+            padding: 10px 15px;
+            border-radius: 18px;
+            margin-bottom: 5px;
+            position: relative;
+        }
+
+        .message-sent {
+            background-color: #0d6efd;
+            color: white;
+            border-bottom-right-radius: 5px;
+            align-self: flex-end;
+        }
+
+        .message-received {
+            background-color: #f0f2f5;
+            color: #212529;
+            border-bottom-left-radius: 5px;
+            align-self: flex-start;
+        }
+
+        .message-time {
+            font-size: 0.7rem;
+            opacity: 0.8;
+            margin-top: 2px;
+            text-align: right;
+        }
+    </style>
+}
+
+@section Scripts {
+    <script src="~/lib/signalr/signalr.min.js"></script>
+    <script src="~/js/chat.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const receiverId = document.getElementById('receiverId').value;
+            const chatUI = new ChatUI(receiverId);
+            chatUI.initialize();
+
+            // Add this to check connection state
+            console.log("Starting chat with receiverId:", receiverId);
+            window.checkSignalRStatus = setInterval(() => {
+                const status = chatUI.chatConnection.isConnected ? "CONNECTED" : "DISCONNECTED";
+                console.log("SignalR status:", status);
+            }, 5000);
+        });
+    </script>
+}

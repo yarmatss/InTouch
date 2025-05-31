@@ -1,0 +1,104 @@
+﻿@model IEnumerable<InTouch.MVC.Models.Post>
+@{
+    ViewData["Title"] = "Feed";
+}
+
+<div class="row">
+    <div class="col-md-3">
+        <!-- Sidebar -->
+        <div class="card mb-4 shadow-sm">
+            <div class="card-body">
+                <h5 class="card-title">Quick Links</h5>
+                <ul class="list-unstyled mb-0">
+                    <li class="mb-2"><a asp-controller="Account" asp-action="Profile" class="text-decoration-none"><i class="bi bi-person-circle me-2"></i>My Profile</a></li>
+                    <li class="mb-2"><a asp-controller="Friends" asp-action="Index" class="text-decoration-none"><i class="bi bi-people me-2"></i>Friends</a></li>
+                    <li class="mb-2"><a asp-controller="Friends" asp-action="Requests" class="text-decoration-none"><i class="bi bi-person-plus me-2"></i>Friend Requests</a></li>
+                    <li class="mb-2"><a asp-controller="Messages" asp-action="Index" class="text-decoration-none"><i class="bi bi-chat-dots me-2"></i>Messages</a></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <!-- Create post card -->
+        <div class="card mb-4 shadow-sm">
+            <div class="card-body">
+                <h5 class="card-title">What's on your mind?</h5>
+                <a asp-controller="Posts" asp-action="Create" class="btn btn-primary">Create Post</a>
+            </div>
+        </div>
+
+        <!-- Posts feed -->
+        @if (Model != null && Model.Any())
+        {
+            foreach (var post in Model)
+            {
+                <div class="card mb-3 shadow-sm">
+                    <div class="card-header bg-white">
+                        <div class="d-flex align-items-center">
+                            <img src="@(string.IsNullOrEmpty(post.User?.ProfilePicture) ? "/images/default-profile.jpg" : post.User.ProfilePicture)"
+                                 class="rounded-circle me-2" alt="Profile" style="width: 40px; height: 40px; object-fit: cover;" />
+                            <div>
+                                <a asp-controller="Account" asp-action="ViewProfile" asp-route-id="@post.UserId" class="text-decoration-none fw-bold">
+                                    @(post.User != null ? $"{post.User.FirstName} {post.User.LastName}" : "Unknown User")
+                                </a>
+                                <div class="text-muted small">@post.CreatedAt.ToString("MMM d, yyyy h:mm tt")</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <p class="card-text">@post.Content</p>
+
+                        @if (!string.IsNullOrEmpty(post.MediaUrl))
+                        {
+                            <div class="mt-2">
+                                @if (post.MediaType == MediaType.Image)
+                                {
+                                    <img src="@post.MediaUrl" class="img-fluid rounded" alt="Post image" />
+                                }
+                                else
+                                {
+                                    <video controls class="w-100 rounded">
+                                        <source src="@post.MediaUrl" type="video/mp4">
+                                        Your browser does not support the video tag.
+                                    </video>
+                                }
+                            </div>
+                        }
+
+                        <div class="d-flex justify-content-between align-items-center mt-3">
+                            <div>
+                                <span class="me-2"><i class="bi bi-hand-thumbs-up"></i> @post.Likes.Count</span>
+                                <span><i class="bi bi-chat"></i> @post.Comments.Count</span>
+                            </div>
+                            <a asp-controller="Posts" asp-action="Details" asp-route-id="@post.Id" class="btn btn-sm btn-outline-primary">
+                                View Details
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            }
+        }
+        else
+        {
+            <div class="alert alert-info">
+                No posts to display. Add some friends or create your first post!
+            </div>
+        }
+    </div>
+
+    <div class="col-md-3">
+        <!-- Friend suggestions -->
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h5 class="card-title">Find Friends</h5>
+                <form asp-controller="Friends" asp-action="Find" method="get" class="mb-3">
+                    <div class="input-group">
+                        <input type="text" name="searchTerm" class="form-control" placeholder="Search users...">
+                        <button class="btn btn-outline-primary" type="submit">Search</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>

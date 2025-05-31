@@ -1,0 +1,64 @@
+﻿@using Microsoft.AspNetCore.Identity
+@inject SignInManager<ApplicationUser> SignInManager
+@inject UserManager<ApplicationUser> UserManager
+
+<ul class="navbar-nav">
+@if (SignInManager.IsSignedIn(User))
+{
+    <li class="nav-item dropdown">
+        <a class="nav-link dropdown-toggle" href="#" id="notificationsDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+            <i class="bi bi-bell"></i>
+        </a>
+        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="notificationsDropdown">
+            <li class="dropdown-header">Notifications</li>
+            <li><hr class="dropdown-divider"></li>
+            <li><a class="dropdown-item" href="#">No new notifications</a></li>
+        </ul>
+    </li>
+    
+    <li class="nav-item dropdown">
+        <a class="nav-link dropdown-toggle" href="#" id="messagesDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+            <i class="bi bi-chat"></i>
+        </a>
+        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="messagesDropdown">
+            <li class="dropdown-header">Messages</li>
+            <li><hr class="dropdown-divider"></li>
+            <li><a class="dropdown-item" href="#">No new messages</a></li>
+            <li><hr class="dropdown-divider"></li>
+            <li><a class="dropdown-item" asp-controller="Messages" asp-action="Index">See all messages</a></li>
+        </ul>
+    </li>
+    
+    <li class="nav-item dropdown">
+        <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" id="userDropdown" role="button" 
+           data-bs-toggle="dropdown" aria-expanded="false">
+            @{
+                var user = await UserManager.GetUserAsync(User);
+                var displayName = !string.IsNullOrEmpty(user?.FirstName) ? $"{user.FirstName}" : User.Identity?.Name;
+            }
+            <img src="@(string.IsNullOrEmpty(user?.ProfilePicture) ? "/images/default-profile.jpg" : user.ProfilePicture)" 
+                 class="rounded-circle me-2" alt="Profile" style="width: 24px; height: 24px; object-fit: cover;" />
+            @displayName
+        </a>
+        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+            <li><a class="dropdown-item" asp-controller="Account" asp-action="Profile">Profile</a></li>
+            <li><a class="dropdown-item" asp-controller="Account" asp-action="Edit">Settings</a></li>
+            <li><hr class="dropdown-divider"></li>
+            <li>
+                <form class="form-inline" asp-controller="Account" asp-action="Logout" method="post">
+                    <button type="submit" class="btn btn-link dropdown-item">Logout</button>
+                </form>
+            </li>
+        </ul>
+    </li>
+}
+else
+{
+    <li class="nav-item">
+        <a class="nav-link text-dark" asp-controller="Account" asp-action="Register">Register</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link text-dark" asp-controller="Account" asp-action="Login">Login</a>
+    </li>
+}
+</ul>

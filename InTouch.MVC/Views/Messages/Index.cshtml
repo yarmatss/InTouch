@@ -1,0 +1,96 @@
+﻿@model IEnumerable<InTouch.MVC.Models.ApplicationUser>
+@inject IMessageService MessageService
+
+@{
+    ViewData["Title"] = "Messages";
+}
+
+<div class="container">
+    <h1 class="mb-4">Messages</h1>
+    
+    <div class="row">
+        @if (Model != null && Model.Any())
+        {
+            <div class="col-md-4 col-lg-3 mb-4 mb-md-0">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-white">
+                        <h5 class="mb-0">Conversations</h5>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="list-group list-group-flush">
+                            @foreach (var user in Model)
+                            {
+                                var lastMessage = await MessageService.GetLastMessageAsync(user.Id);
+                                var unreadCount = await MessageService.GetUnreadCountAsync(user.Id);
+                                var isActive = ViewData["ActiveUserId"]?.ToString() == user.Id;
+                                
+                                <a asp-action="Conversation" asp-route-userId="@user.Id" 
+                                   class="list-group-item list-group-item-action @(isActive ? "active" : "")">
+                                    <div class="d-flex align-items-center">
+                                        <div class="position-relative me-3">
+                                            <img src="@(string.IsNullOrEmpty(user.ProfilePicture) ? "/images/default-profile.jpg" : user.ProfilePicture)"
+                                                 class="rounded-circle" alt="Profile" style="width: 48px; height: 48px; object-fit: cover;" />
+                                                 
+                                            @if (DateTime.Now - user.LastActive < TimeSpan.FromMinutes(5))
+                                            {
+                                                <span class="position-absolute bottom-0 end-0 bg-success rounded-circle p-1"
+                                                      style="width:10px; height:10px; border: 2px solid white;"></span>
+                                            }
+                                        </div>
+                                        <div class="flex-grow-1 overflow-hidden">
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <h6 class="mb-0 text-truncate">@user.FirstName @user.LastName</h6>
+                                                @if (lastMessage != null)
+                                                {
+                                                    <small>@lastMessage.SentAt.ToString("h:mm tt")</small>
+                                                }
+                                            </div>
+                                            <p class="mb-0 text-truncate small @(unreadCount > 0 ? "fw-bold" : "text-muted")">
+                                                @if (lastMessage != null)
+                                                {
+                                                    @(lastMessage.SenderId == user.Id ? "" : "You: ")@lastMessage.Content
+                                                }
+                                            </p>
+                                        </div>
+                                        @if (unreadCount > 0)
+                                        {
+                                            <span class="badge bg-primary rounded-pill ms-2">@unreadCount</span>
+                                        }
+                                    </div>
+                                </a>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-8 col-lg-9">
+                @if (ViewData["ActiveUserId"] == null)
+                {
+                    <div class="text-center p-5">
+                        <i class="bi bi-chat-dots text-muted" style="font-size: 5rem;"></i>
+                        <h3 class="mt-3">Your Messages</h3>
+                        <p class="text-muted">Select a conversation to start chatting.</p>
+                    </div>
+                }
+                else
+                {
+                    @await Html.PartialAsync("_ConversationPartial")
+                }
+            </div>
+        }
+        else
+        {
+            <div class="col">
+                <div class="text-center p-5">
+                    <i class="bi bi-chat-dots text-muted" style="font-size: 5rem;"></i>
+                    <h3 class="mt-3">No Messages Yet</h3>
+                    <p class="text-muted">You don't have any conversations yet.</p>
+                    <a asp-controller="Friends" asp-action="Index" class="btn btn-primary mt-3">
+                        <i class="bi bi-people"></i> Find friends to chat with
+                    </a>
+                </div>
+            </div>
+        }
+    </div>
+</div>

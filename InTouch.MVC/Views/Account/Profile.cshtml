@@ -1,0 +1,290 @@
+﻿@model InTouch.MVC.Models.ApplicationUser
+@inject UserManager<ApplicationUser> UserManager
+@inject IFriendService FriendService
+@inject IPostService PostService
+
+@{
+    ViewData["Title"] = "Profile";
+    var isCurrentUser = Model.Id == UserManager.GetUserId(User);
+    var friends = await FriendService.GetFriendsAsync(Model.Id);
+    var friendshipStatus = !isCurrentUser && User.Identity.IsAuthenticated ?
+        await FriendService.GetFriendshipStatusAsync(UserManager.GetUserId(User), Model.Id) :
+        FriendshipStatusEnum.None;
+}
+
+<div class="container">
+    <!-- Profile header -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-3 text-center mb-3 mb-md-0">
+                    <img src="@(string.IsNullOrEmpty(Model.ProfilePicture) ? "/images/default-profile.jpg" : Model.ProfilePicture)"
+                         class="rounded-circle img-thumbnail" alt="Profile" style="width: 180px; height: 180px; object-fit: cover;" />
+                </div>
+                <div class="col-md-9">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <div>
+                            <h2 class="mb-0">@Model.FirstName @Model.LastName</h2>
+                            <p class="text-muted">@@@Model.UserName</p>
+                        </div>
+                        <div>
+                            @if (isCurrentUser)
+                            {
+                                <a asp-controller="Account" asp-action="Edit" class="btn btn-outline-primary">
+                                    <i class="bi bi-pencil"></i> Edit Profile
+                                </a>
+                            }
+                            else if (User.Identity!.IsAuthenticated)
+                            {
+                                <div class="d-flex">
+                                    @switch (friendshipStatus)
+                                    {
+                                        case FriendshipStatusEnum.None:
+                                            <form asp-controller="Friends" asp-action="SendRequest" method="post">
+                                                <input type="hidden" name="userId" value="@Model.Id" />
+                                                <button type="submit" class="btn btn-primary me-2">
+                                                    <i class="bi bi-person-plus"></i> Add Friend
+                                                </button>
+                                            </form>
+                                            break;
+                                        case FriendshipStatusEnum.RequestSent:
+                                            <button class="btn btn-secondary me-2" disabled>
+                                                <i class="bi bi-hourglass-split"></i> Request Sent
+                                            </button>
+                                            break;
+                                        case FriendshipStatusEnum.RequestReceived:
+                                            <div class="btn-group me-2">
+                                                <form asp-controller="Friends" asp-action="AcceptRequest" method="post" class="d-inline">
+                                                    <input type="hidden" name="friendshipId" value="@ViewData["FriendshipId"]" />
+                                                    <button type="submit" class="btn btn-success">
+                                                        <i class="bi bi-check-lg"></i> Accept
+                                                    </button>
+                                                </form>
+                                                <form asp-controller="Friends" asp-action="RejectRequest" method="post" class="d-inline">
+                                                    <input type="hidden" name="friendshipId" value="@ViewData["FriendshipId"]" />
+                                                    <button type="submit" class="btn btn-outline-danger">
+                                                        <i class="bi bi-x-lg"></i> Reject
+                                                    </button>
+                                                </form>
+                                            </div>
+                                            break;
+                                        case FriendshipStatusEnum.Friends:
+                                            <form asp-controller="Friends" asp-action="Remove" method="post" class="d-inline me-2">
+                                                <input type="hidden" name="userId" value="@Model.Id" />
+                                                <button type="submit" class="btn btn-outline-secondary">
+                                                    <i class="bi bi-person-dash"></i> Unfriend
+                                                </button>
+                                            </form>
+                                            break;
+                                    }
+                                    <a asp-controller="Messages" asp-action="Conversation" asp-route-userId="@Model.Id"
+                                       class="btn btn-outline-primary">
+                                        <i class="bi bi-chat"></i> Message
+                                    </a>
+                                </div>
+                            }
+                        </div>
+                    </div>
+
+                    @if (!string.IsNullOrEmpty(Model.Bio))
+                    {
+                        <p>@Model.Bio</p>
+                    }
+
+                    <div class="d-flex mt-3">
+                        <div class="me-4">
+                            <h6>Friends</h6>
+                            <p class="fw-bold text-primary">@friends.Count</p>
+                        </div>
+                        <div>
+                            <h6>Last Active</h6>
+                            <p class="text-muted">
+                                @if (DateTime.Now - Model.LastActive < TimeSpan.FromMinutes(5))
+                                {
+                                    <span class="text-success">
+                                        <i class="bi bi-circle-fill me-1" style="font-size: 0.5rem;"></i> Online now
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span>@Model.LastActive.ToString("MMM d, yyyy h:mm tt")</span>
+                                }
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Profile tabs -->
+    <ul class="nav nav-tabs mb-4" id="profileTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="posts-tab" data-bs-toggle="tab" data-bs-target="#posts"
+                    type="button" role="tab" aria-controls="posts" aria-selected="true">
+                Posts
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="videos-tab" data-bs-toggle="tab" data-bs-target="#videos"
+                    type="button" role="tab" aria-controls="videos" aria-selected="false">
+                Videos
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="music-tab" data-bs-toggle="tab" data-bs-target="#music"
+                    type="button" role="tab" aria-controls="music" aria-selected="false">
+                Music
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="friends-tab" data-bs-toggle="tab" data-bs-target="#friends"
+                    type="button" role="tab" aria-controls="friends" aria-selected="false">
+                Friends (@friends.Count)
+            </button>
+        </li>
+    </ul>
+
+    <!-- Tab content -->
+    <div class="tab-content" id="profileTabsContent">
+        <div class="tab-pane fade show active" id="posts" role="tabpanel" aria-labelledby="posts-tab">
+            @if (isCurrentUser)
+            {
+                <div class="card shadow-sm mb-4">
+                    <div class="card-body">
+                        <h5 class="card-title">What's on your mind?</h5>
+                        <a asp-controller="Posts" asp-action="Create" class="btn btn-primary">Create Post</a>
+                    </div>
+                </div>
+            }
+
+            <div id="user-posts">
+                @{
+                    var userPosts = await PostService.GetUserPostsAsync(Model.Id);
+                    if (userPosts.Any())
+                    {
+                        foreach (var post in userPosts)
+                        {
+                            <partial name="_PostItem" model="post" />
+                        }
+                    }
+                    else
+                    {
+                        <div class="alert alert-info">
+                            No posts to display.
+                        </div>
+                    }
+                }
+            </div>
+        </div>
+
+        <div class="tab-pane fade" id="videos" role="tabpanel" aria-labelledby="videos-tab">
+            @if (isCurrentUser)
+            {
+                <div class="mb-3">
+                    <a asp-controller="Videos" asp-action="Upload" class="btn btn-primary">
+                        <i class="bi bi-upload"></i> Upload Video
+                    </a>
+                </div>
+            }
+
+            <div id="user-videos">
+                <!-- Will be loaded via AJAX -->
+                <div class="text-center py-4">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="tab-pane fade" id="music" role="tabpanel" aria-labelledby="music-tab">
+            @if (isCurrentUser)
+            {
+                <div class="mb-3">
+                    <a asp-controller="Music" asp-action="Upload" class="btn btn-primary">
+                        <i class="bi bi-upload"></i> Upload Music
+                    </a>
+                </div>
+            }
+
+            <div id="user-music">
+                <!-- Will be loaded via AJAX -->
+                <div class="text-center py-4">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="tab-pane fade" id="friends" role="tabpanel" aria-labelledby="friends-tab">
+            @if (friends.Count > 0)
+            {
+                <div class="row">
+                    @foreach (var friend in friends)
+                    {
+                        <div class="col-md-6 col-lg-4 mb-3">
+                            <div class="card shadow-sm h-100">
+                                <div class="card-body d-flex">
+                                    <img src="@(string.IsNullOrEmpty(friend.ProfilePicture) ? "/images/default-profile.jpg" : friend.ProfilePicture)"
+                                         class="rounded-circle me-3" alt="Profile" style="width: 60px; height: 60px; object-fit: cover;" />
+                                    <div class="d-flex flex-column justify-content-center">
+                                        <h5 class="card-title mb-0">@friend.FirstName @friend.LastName</h5>
+                                        <p class="text-muted mb-2">@@@friend.UserName</p>
+                                        <div>
+                                            <a asp-controller="Account" asp-action="ViewProfile" asp-route-id="@friend.Id"
+                                               class="btn btn-sm btn-outline-primary">View Profile</a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+            else
+            {
+                <div class="alert alert-info">No friends to display.</div>
+            }
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function() {
+            // Load user videos when videos tab is clicked
+            $('#videos-tab').on('click', function() {
+                if ($('#user-videos').children('.spinner-border').length > 0) {
+                    $.ajax({
+                        url: '@Url.Action("UserVideos", "Videos", new { userId = Model.Id })',
+                        type: 'GET',
+                        success: function(data) {
+                            $('#user-videos').html(data);
+                        },
+                        error: function() {
+                            $('#user-videos').html('<div class="alert alert-danger">Failed to load videos.</div>');
+                        }
+                    });
+                }
+            });
+
+            // Load user music when music tab is clicked
+            $('#music-tab').on('click', function() {
+                if ($('#user-music').children('.spinner-border').length > 0) {
+                    $.ajax({
+                        url: '@Url.Action("UserMusic", "Music", new { userId = Model.Id })',
+                        type: 'GET',
+                        success: function(data) {
+                            $('#user-music').html(data);
+                        },
+                        error: function() {
+                            $('#user-music').html('<div class="alert alert-danger">Failed to load music.</div>');
+                        }
+                    });
+                }
+            });
+        });
+    </script>
+}

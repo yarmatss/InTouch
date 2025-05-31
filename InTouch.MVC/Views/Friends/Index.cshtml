@@ -1,0 +1,75 @@
+﻿@model IEnumerable<InTouch.MVC.Models.ApplicationUser>
+@{
+    ViewData["Title"] = "Friends";
+}
+
+<div class="container">
+    <div class="row mb-4">
+        <div class="col">
+            <h1 class="mb-3">My Friends</h1>
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <a asp-controller="Friends" asp-action="Requests" class="btn btn-outline-primary me-2">
+                        <i class="bi bi-person-plus"></i> Friend Requests
+                    </a>
+                    <a asp-controller="Friends" asp-action="Find" class="btn btn-outline-primary">
+                        <i class="bi bi-search"></i> Find Friends
+                    </a>
+                </div>
+                <div>
+                    <span class="badge bg-primary rounded-pill">@Model.Count()</span> friends
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @if (Model != null && Model.Any())
+    {
+        <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+            @foreach (var friend in Model)
+            {
+                <div class="col">
+                    <div class="card shadow-sm h-100">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center mb-3">
+                                <img src="@(string.IsNullOrEmpty(friend.ProfilePicture) ? "/images/default-profile.jpg" : friend.ProfilePicture)"
+                                     class="rounded-circle me-3" alt="Profile" style="width: 64px; height: 64px; object-fit: cover;" />
+                                <div>
+                                    <h5 class="card-title mb-0">@friend.FirstName @friend.LastName</h5>
+                                    <p class="text-muted mb-0">@@@friend.UserName</p>
+                                </div>
+                            </div>
+
+                            <div class="d-flex justify-content-between mt-3">
+                                <a asp-controller="Account" asp-action="ViewProfile" asp-route-id="@friend.Id"
+                                   class="btn btn-sm btn-outline-primary">
+                                    <i class="bi bi-person"></i> View Profile
+                                </a>
+                                <a asp-controller="Messages" asp-action="Conversation" asp-route-userId="@friend.Id"
+                                   class="btn btn-sm btn-outline-primary">
+                                    <i class="bi bi-chat"></i> Message
+                                </a>
+                            </div>
+                        </div>
+                        <div class="card-footer bg-white">
+                            <form asp-controller="Friends" asp-action="Remove" method="post">
+                                <input type="hidden" name="userId" value="@friend.Id" />
+                                <button type="submit" class="btn btn-sm btn-outline-danger w-100"
+                                        onclick="return confirm('Are you sure you want to unfriend @friend.FirstName?');">
+                                    <i class="bi bi-person-dash"></i> Unfriend
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+    else
+    {
+        <div class="alert alert-info">
+            <i class="bi bi-info-circle me-2"></i> You don't have any friends yet.
+            <a asp-controller="Friends" asp-action="Find" class="alert-link">Find people</a> to connect with.
+        </div>
+    }
+</div>
