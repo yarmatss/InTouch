@@ -4,31 +4,7 @@
 
 <ul class="navbar-nav">
 @if (SignInManager.IsSignedIn(User))
-{
-    <li class="nav-item dropdown">
-        <a class="nav-link dropdown-toggle" href="#" id="notificationsDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-            <i class="bi bi-bell"></i>
-        </a>
-        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="notificationsDropdown">
-            <li class="dropdown-header">Notifications</li>
-            <li><hr class="dropdown-divider"></li>
-            <li><a class="dropdown-item" href="#">No new notifications</a></li>
-        </ul>
-    </li>
-    
-    <li class="nav-item dropdown">
-        <a class="nav-link dropdown-toggle" href="#" id="messagesDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-            <i class="bi bi-chat"></i>
-        </a>
-        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="messagesDropdown">
-            <li class="dropdown-header">Messages</li>
-            <li><hr class="dropdown-divider"></li>
-            <li><a class="dropdown-item" href="#">No new messages</a></li>
-            <li><hr class="dropdown-divider"></li>
-            <li><a class="dropdown-item" asp-controller="Messages" asp-action="Index">See all messages</a></li>
-        </ul>
-    </li>
-    
+{    
     <li class="nav-item dropdown">
         <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" id="userDropdown" role="button" 
            data-bs-toggle="dropdown" aria-expanded="false">
