@@ -26,8 +26,28 @@ class ChatConnection {
                 .configureLogging(signalR.LogLevel.Debug)  // Debug-level logging during development
                 .build();
 
-            // Set up message handling
+            // Set up message handling (will be overridden by consumers)
             this.setupMessageHandlers();
+
+            // IMPORTANT: Make sure all handlers are registered BEFORE starting connection
+            if (this.connection) {
+                // Register global handlers explicitly
+                this.connection.on("UpdateConversationList",
+                    (otherUserId, messageContent, sentAt, isSenderCurrentUser, newUnreadCount) => {
+                        console.log("UpdateConversationList received globally");
+                        if (this.handleUpdateConversationList) {
+                            this.handleUpdateConversationList(otherUserId, messageContent,
+                                new Date(sentAt), isSenderCurrentUser, newUnreadCount);
+                        }
+                    });
+
+                this.connection.on("ClearUnreadCountForConversation", (conversationPartnerId) => {
+                    console.log("ClearUnreadCountForConversation received globally");
+                    if (this.handleClearUnreadCount) {
+                        this.handleClearUnreadCount(conversationPartnerId);
+                    }
+                });
+            }
 
             // Start the connection
             await this.connection.start();
@@ -38,115 +58,74 @@ class ChatConnection {
             return true;
         } catch (error) {
             console.error("Error establishing SignalR connection:", error);
-
-            // Show detailed connection error
-            const errorDiv = document.getElementById('connectionStatus');
-            if (errorDiv) {
-                errorDiv.textContent = `Connection error: ${error.message || "Could not connect to server"}`;
-                errorDiv.style.display = 'block';
-                errorDiv.className = 'alert alert-danger';
-            }
-
-            return false;
+            // Rest of error handling...
         }
     }
 
+    // Method to stop the connection
+    async stop() {
+        if (this.connection && this.isConnected) {
+            try {
+                await this.connection.stop();
+                this.isConnected = false;
+                console.log("SignalR connection stopped.");
+            } catch (err) {
+                console.error("Error stopping SignalR connection: ", err);
+            }
+        }
+    }
+
+
     // Set up all message handler registrations
+    // These are placeholders and should be overridden by ChatUI or ConversationsListUI
     setupMessageHandlers() {
-        // Handle received messages with detailed logging
         this.connection.on("ReceiveMessage", (messageId, senderId, message, sentAt) => {
-            console.log("Message received:", { messageId, senderId, message, sentAt });
-            this.handleReceivedMessage(messageId, senderId, message, sentAt);
+            if (this.handleReceivedMessage) this.handleReceivedMessage(messageId, senderId, message, sentAt);
         });
-
-        // Handle message sent confirmation with logging
         this.connection.on("MessageSent", (messageId, message, sentAt) => {
-            console.log("Message sent confirmation:", { messageId, message, sentAt });
-            this.handleMessageSent(messageId, message, sentAt);
+            if (this.handleMessageSent) this.handleMessageSent(messageId, message, sentAt);
         });
-
-        // Handle read receipts
         this.connection.on("MessageRead", (messageId) => {
-            console.log("Message marked as read:", messageId);
-            this.handleMessageRead(messageId);
+            if (this.handleMessageRead) this.handleMessageRead(messageId);
         });
-
-        // Handle typing indicators
         this.connection.on("UserTyping", (userId, isTyping) => {
-            console.log(`User ${userId} typing status: ${isTyping}`);
-            this.handleUserTyping(userId, isTyping);
+            if (this.handleUserTyping) this.handleUserTyping(userId, isTyping);
         });
-
-        // Handle user connection state
         this.connection.on("UserConnected", userId => {
-            console.log("User connected:", userId);
-            this.handleUserConnected(userId);
+            if (this.handleUserConnected) this.handleUserConnected(userId);
         });
-
         this.connection.on("UserDisconnected", userId => {
-            console.log("User disconnected:", userId);
-            this.handleUserDisconnected(userId);
+            if (this.handleUserDisconnected) this.handleUserDisconnected(userId);
         });
-
-        // Error handling
-        this.connection.on("error", error => {
-            console.error("SignalR error:", error);
-        });
-
-        // Handle connection lost/reconnecting
+        this.connection.on("error", error => console.error("SignalR error:", error));
         this.connection.onreconnecting(error => {
             console.log("Reconnecting to SignalR hub...", error);
             this.isConnected = false;
             this.reconnectAttempts++;
-            this.handleConnectionStatus("reconnecting");
+            if (this.handleConnectionStatus) this.handleConnectionStatus("reconnecting");
         });
-
-        // Handle connection reestablished
         this.connection.onreconnected(connectionId => {
             console.log("Reconnected to SignalR hub", connectionId);
             this.isConnected = true;
             this.reconnectAttempts = 0;
-            this.handleConnectionStatus("connected");
+            if (this.handleConnectionStatus) this.handleConnectionStatus("connected");
         });
-
-        // Handle complete connection closed
         this.connection.onclose(error => {
             console.log("Connection closed", error);
             this.isConnected = false;
-            this.handleConnectionStatus("disconnected");
+            if (this.handleConnectionStatus) this.handleConnectionStatus("disconnected");
         });
     }
 
     // Send a message to another user
     async sendMessage(receiverId, message) {
         if (!this.isConnected || !message.trim()) return false;
-
         try {
-            console.log(`Sending message to ${receiverId}: ${message}`);
             await this.connection.invoke("SendMessage", receiverId, message);
-
-            // Stop typing indicator after sending message
-            this.sendTypingStop(receiverId);
+            this.sendTypingStop(receiverId); // Assuming this method exists or is added
             return true;
         } catch (error) {
-            // Show more detailed error
             console.error("Error sending message:", error);
-
-            // Add useful error details
-            if (error.message) {
-                const errorDiv = document.getElementById('connectionStatus');
-                if (errorDiv) {
-                    errorDiv.textContent = `Error: ${error.message}`;
-                    errorDiv.style.display = 'block';
-                    errorDiv.className = 'alert alert-danger';
-
-                    // Auto-hide after 5 seconds
-                    setTimeout(() => {
-                        errorDiv.style.display = 'none';
-                    }, 5000);
-                }
-            }
-
             return false;
         }
     }
@@ -154,9 +133,7 @@ class ChatConnection {
     // Mark message as read
     async markMessageAsRead(messageId) {
         if (!this.isConnected || !messageId) return;
-
         try {
-            console.log("Marking message as read:", messageId);
             await this.connection.invoke("MarkAsRead", parseInt(messageId));
         } catch (error) {
             console.error("Error marking message as read:", error);
@@ -166,20 +143,11 @@ class ChatConnection {
     // Send typing indicator start
     async sendTypingStart(receiverId) {
         if (!this.isConnected || this.isTyping || !receiverId) return;
-
         try {
             this.isTyping = true;
             await this.connection.invoke("TypingStart", receiverId);
-
-            // Clear existing timeout
-            if (this.typingTimeout) {
-                clearTimeout(this.typingTimeout);
-            }
-
-            // Set a new timeout to stop the typing indicator after some inactivity
-            this.typingTimeout = setTimeout(() => {
-                this.sendTypingStop(receiverId);
-            }, 3000);
+            if (this.typingTimeout) clearTimeout(this.typingTimeout);
+            this.typingTimeout = setTimeout(() => this.sendTypingStop(receiverId), 3000);
         } catch (error) {
             console.error("Error sending typing indicator:", error);
         }
@@ -188,11 +156,9 @@ class ChatConnection {
     // Send typing indicator stop
     async sendTypingStop(receiverId) {
         if (!this.isConnected || !this.isTyping || !receiverId) return;
-
         try {
             this.isTyping = false;
             await this.connection.invoke("TypingStop", receiverId);
-
             if (this.typingTimeout) {
                 clearTimeout(this.typingTimeout);
                 this.typingTimeout = null;
@@ -202,157 +168,84 @@ class ChatConnection {
         }
     }
 
-    // Event handler functions - override these in the UI layer
-
-    handleReceivedMessage(messageId, senderId, message, sentAt) {
-        console.log(`Received message from ${senderId}: ${message}`);
-        // Override this in UI layer
-    }
-
-    handleMessageSent(messageId, message, sentAt) {
-        console.log(`Message sent successfully: ${message} (ID: ${messageId})`);
-        // Override this in UI layer
-    }
-
-    handleMessageRead(messageId) {
-        console.log(`Message ${messageId} was read`);
-        // Override this in UI layer
-    }
-
-    handleUserTyping(userId, isTyping) {
-        console.log(`User ${userId} is ${isTyping ? 'typing' : 'not typing'}`);
-        // Override this in UI layer
-    }
-
-    handleUserConnected(userId) {
-        console.log(`User ${userId} connected`);
-        // Override this in UI layer
-    }
-
-    handleUserDisconnected(userId) {
-        console.log(`User ${userId} disconnected`);
-        // Override this in UI layer
-    }
-
-    handleConnectionStatus(status) {
-        console.log(`Connection status: ${status}`);
-        // Override this in UI layer
-    }
+    // Default event handlers (can be overridden)
+    handleReceivedMessage(messageId, senderId, message, sentAt) { console.log("Default: Message received", { messageId, senderId, message, sentAt }); }
+    handleMessageSent(messageId, message, sentAt) { console.log("Default: Message sent", { messageId, message, sentAt }); }
+    handleMessageRead(messageId) { console.log("Default: Message read", messageId); }
+    handleUserTyping(userId, isTyping) { console.log("Default: User typing", { userId, isTyping }); }
+    handleUserConnected(userId) { console.log("Default: User connected", userId); }
+    handleUserDisconnected(userId) { console.log("Default: User disconnected", userId); }
+    handleConnectionStatus(status) { console.log("Default: Connection status", status); }
 }
 
-// UI-specific chat functionality
+// UI-specific chat functionality (for individual conversation page)
 class ChatUI {
     constructor(receiverId) {
         this.chatConnection = new ChatConnection();
-        this.receiverId = receiverId;
+        this.receiverId = receiverId; // ID of the other user in the chat
         this.messageContainer = document.getElementById('messageContainer');
         this.messageForm = document.getElementById('messageForm');
         this.messageInput = document.getElementById('messageInput');
         this.typingIndicator = document.getElementById('typingIndicator');
-        this.timestampUpdateInterval = setInterval(this.updateTimestamps.bind(this), 60000); // Update every minute
+        this.timestampUpdateInterval = setInterval(this.updateTimestamps.bind(this), 60000);
+        this.checkUnreadInterval = null;
     }
 
     async initialize() {
         console.log(`Initializing chat UI for receiver: ${this.receiverId}`);
-
-        // Initialize connection
         const connected = await this.chatConnection.initialize();
         if (!connected) {
             this.showErrorMessage("Failed to connect to chat service. Please refresh the page.");
             return false;
         }
 
-        // Override event handlers
         this.chatConnection.handleReceivedMessage = this.handleReceivedMessage.bind(this);
         this.chatConnection.handleMessageRead = this.handleMessageRead.bind(this);
         this.chatConnection.handleUserTyping = this.handleUserTyping.bind(this);
         this.chatConnection.handleUserConnected = this.handleUserConnected.bind(this);
         this.chatConnection.handleUserDisconnected = this.handleUserDisconnected.bind(this);
         this.chatConnection.handleConnectionStatus = this.handleConnectionStatus.bind(this);
-        this.chatConnection.handleMessageSent = this.handleMessageSent.bind(this);
+        this.chatConnection.handleMessageSent = this.handleMessageSent.bind(this); // For sent messages by current user
 
-        // Set up UI event listeners
         this.setupEventListeners();
-
-        // Mark all visible messages as read - Add a small delay to ensure DOM is ready
         setTimeout(() => {
             this.markVisibleMessagesAsRead();
-
-            // Set up periodic checking for unread messages
-            this.checkUnreadInterval = setInterval(() => {
-                this.markVisibleMessagesAsRead();
-            }, 5000); // Check every 5 seconds
+            this.checkUnreadInterval = setInterval(() => this.markVisibleMessagesAsRead(), 5000);
         }, 1000);
-
-        // Scroll to bottom of messages
         this.scrollToBottom();
-
         return true;
     }
 
     setupEventListeners() {
-        // Message form submission
-        this.messageForm.addEventListener('submit', this.handleSubmit.bind(this));
-
-        // Typing indicator
-        this.messageInput.addEventListener('input', this.handleInput.bind(this));
-
-        // Mark messages as read when they become visible
+        if (this.messageForm) this.messageForm.addEventListener('submit', this.handleSubmit.bind(this));
+        if (this.messageInput) this.messageInput.addEventListener('input', this.handleInput.bind(this));
         this.setupIntersectionObserver();
-
-        // Page unload handler to clean up
-        window.addEventListener('beforeunload', () => {
-            this.cleanup();
-        });
+        window.addEventListener('beforeunload', () => this.cleanup());
     }
 
     async handleSubmit(event) {
         event.preventDefault();
-
         const message = this.messageInput.value.trim();
         if (!message) return;
-
-        // Clear input immediately for better UX
-        const messageText = message; // Save a copy before clearing
+        const messageText = message;
         this.messageInput.value = '';
         this.messageInput.focus();
-
-        console.log(`Submitting message: ${messageText}`);
-
-        // Send the message but don't add to UI yet - wait for server confirmation
         const sent = await this.chatConnection.sendMessage(this.receiverId, messageText);
-
         if (!sent) {
-            // Only show error if message failed
             this.showErrorMessage("Failed to send message. Please try again.");
-            // Optionally restore the input text to let them try again
             this.messageInput.value = messageText;
         }
-
-        // DO NOT add message to UI here - we wait for server confirmation via handleMessageSent
-    }
-
-    startHeartbeat() {
-        this.heartbeatInterval = setInterval(() => {
-            if (this.chatConnection.isConnected) {
-                this.chatConnection.connection.invoke("UpdateLastActive");
-            }
-        }, 30000); // Every 30 seconds
     }
 
     handleInput() {
         const message = this.messageInput.value.trim();
-
-        if (message) {
-            this.chatConnection.sendTypingStart(this.receiverId);
-        } else {
-            this.chatConnection.sendTypingStop(this.receiverId);
-        }
+        if (message) this.chatConnection.sendTypingStart(this.receiverId);
+        else this.chatConnection.sendTypingStop(this.receiverId);
     }
 
+    // Called when the current user's message is confirmed sent by the server
     handleMessageSent(messageId, message, sentAt) {
-        // This now adds the message to UI only once, when server confirms it was sent
-        console.log(`Message sent confirmation received: ${messageId}`);
+        console.log(`Message sent confirmation received by ChatUI: ${messageId}`);
         this.addMessageToUI(message, new Date(sentAt), true, messageId);
     }
 
@@ -363,91 +256,50 @@ class ChatUI {
         const diffMins = Math.floor(diffMs / 60000);
         const diffHours = Math.floor(diffMins / 60);
         const diffDays = Math.floor(diffHours / 24);
-
-        // Define options for 24-hour time format
         const timeOptions = { hour: '2-digit', minute: '2-digit', hour12: false };
 
-        // For messages from today
         if (messageDate.toDateString() === now.toDateString()) {
-            // Very recent messages (less than 1 minute ago)
-            if (diffMins < 1) {
-                return 'Just now';
-            }
-            // Recent messages (less than 1 hour ago)
-            if (diffHours < 1) {
-                return `${diffMins} min${diffMins !== 1 ? 's' : ''} ago`;
-            }
-            // Messages from today but over an hour ago
+            if (diffMins < 1) return 'Just now';
+            if (diffHours < 1) return `${diffMins} min${diffMins !== 1 ? 's' : ''} ago`;
             return messageDate.toLocaleTimeString('en-US', timeOptions);
         }
-        // For messages from yesterday
-        else if (diffDays === 1) {
-            return `Yesterday, ${messageDate.toLocaleTimeString('en-US', timeOptions)}`;
-        }
-        // For messages from this week (less than 7 days ago)
-        else if (diffDays < 7) {
+        if (diffDays === 1) return `Yesterday, ${messageDate.toLocaleTimeString('en-US', timeOptions)}`;
+        if (diffDays < 7) {
             const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
             return `${days[messageDate.getDay()]}, ${messageDate.toLocaleTimeString('en-US', timeOptions)}`;
         }
-        // For older messages
-        else {
-            return messageDate.toLocaleDateString('en-US', {
-                month: 'short',
-                day: 'numeric',
-                year: messageDate.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
-            }) + ' ' + messageDate.toLocaleTimeString('en-US', timeOptions);
-        }
+        return messageDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: messageDate.getFullYear() !== now.getFullYear() ? 'numeric' : undefined }) + ' ' + messageDate.toLocaleTimeString('en-US', timeOptions);
     }
 
     updateTimestamps() {
         if (!this.messageContainer) return;
-
-        const recentMessages = this.messageContainer.querySelectorAll('.message');
-
-        recentMessages.forEach(message => {
-            const timeElement = message.querySelector('.message-time');
-            if (!timeElement) return;
-
+        this.messageContainer.querySelectorAll('.message .message-time').forEach(timeElement => {
             const fullTimestamp = timeElement.getAttribute('title');
-
             if (fullTimestamp) {
                 const messageTime = new Date(fullTimestamp);
                 const formattedTime = this.formatTimestamp(messageTime);
-
-                // Update only the text part, not the read receipt icon
-                const readReceipt = timeElement.querySelector('span');
-                if (readReceipt) {
-                    timeElement.innerHTML = formattedTime + ' ';
-                    timeElement.appendChild(readReceipt);
-                } else {
-                    timeElement.textContent = formattedTime;
-                }
+                const readReceiptSpan = timeElement.querySelector('span.ms-1');
+                timeElement.textContent = formattedTime + ' '; // Add space before icon
+                if (readReceiptSpan) timeElement.appendChild(readReceiptSpan);
             }
         });
     }
 
     cleanup() {
-        if (this.timestampUpdateInterval) {
-            clearInterval(this.timestampUpdateInterval);
+        if (this.timestampUpdateInterval) clearInterval(this.timestampUpdateInterval);
+        if (this.checkUnreadInterval) clearInterval(this.checkUnreadInterval);
+        if (window.checkSignalRStatus) clearInterval(window.checkSignalRStatus);
+        if (this.chatConnection) {
+            this.chatConnection.stop(); // Stop the connection
         }
-
-        if (this.checkUnreadInterval) {
-            clearInterval(this.checkUnreadInterval);
-        }
-
-        // Remove the SignalR connection status interval
-        if (window.checkSignalRStatus) {
-            clearInterval(window.checkSignalRStatus);
-        }
+        console.log("ChatUI cleaned up.");
     }
 
-    addMessageToUI(content, time, isSent, messageId = null) {
-        // Check if we need to add a date header
+    addMessageToUI(content, time, isSentByCurrentUser, messageId = null) {
+        if (!this.messageContainer) return;
         const messageDate = new Date(time).toDateString();
         const dateHeaders = Array.from(this.messageContainer.querySelectorAll('.date-header'));
-        const needsDateHeader = !dateHeaders.some(header =>
-            header.textContent.includes(new Date(time).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }))
-        );
+        const needsDateHeader = !dateHeaders.some(header => header.textContent.includes(new Date(time).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })));
 
         if (needsDateHeader) {
             const fullDate = new Date(time).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
@@ -457,264 +309,287 @@ class ChatUI {
             this.messageContainer.appendChild(dateHeaderElement);
         }
 
-        // Format the time
         const formattedTime = this.formatTimestamp(time);
-
-        // Add tooltip with precise timestamp for hover effect
-        const fullTimestamp = new Date(time).toLocaleString('en-US', {
-            month: 'short',
-            day: 'numeric',
-            year: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit',
-            second: '2-digit'
-        });
-
-        // Create message element
+        const fullTimestamp = new Date(time).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' });
         const messageDiv = document.createElement('div');
-        messageDiv.className = `d-flex ${isSent ? 'justify-content-end' : 'justify-content-start'} mb-2`;
-
-        const statusIcon = isSent ? '<i class="bi bi-check2" style="color: white;"></i>' : ''; // Default to single check, white for sent
+        messageDiv.className = `d-flex ${isSentByCurrentUser ? 'justify-content-end' : 'justify-content-start'} mb-2`;
+        const statusIcon = isSentByCurrentUser ? '<i class="bi bi-check2" style="color: white;"></i>' : ''; // Initial sent icon
 
         messageDiv.innerHTML = `
-        <div class="message ${isSent ? 'message-sent' : 'message-received'}" ${messageId ? `data-id="${messageId}"` : ''}>
-            <div class="message-content">${this.escapeHtml(content)}</div>
-            <div class="message-time" title="${fullTimestamp}">
-                ${formattedTime}
-                ${isSent ? `<span class="ms-1">${statusIcon}</span>` : ''}
-            </div>
-        </div>
-        `;
-
+            <div class="message ${isSentByCurrentUser ? 'message-sent' : 'message-received'}" ${messageId ? `data-id="${messageId}"` : ''}>
+                <div class="message-content">${this.escapeHtml(content)}</div>
+                <div class="message-time" title="${fullTimestamp}">
+                    ${formattedTime}
+                    ${isSentByCurrentUser ? `<span class="ms-1">${statusIcon}</span>` : ''}
+                </div>
+            </div>`;
         this.messageContainer.appendChild(messageDiv);
         this.scrollToBottom();
     }
 
     scrollToBottom() {
-        if (this.messageContainer) {
-            this.messageContainer.scrollTop = this.messageContainer.scrollHeight;
-        }
+        if (this.messageContainer) this.messageContainer.scrollTop = this.messageContainer.scrollHeight;
     }
 
     setupIntersectionObserver() {
-        if (!('IntersectionObserver' in window)) {
-            // Fallback for browsers without IntersectionObserver support
-            this.markAllMessagesAsRead();
-            return;
+        if (!('IntersectionObserver' in window) || !this.messageContainer) {
+            this.markAllMessagesAsReadFallback(); return;
         }
-
-        // Use Intersection Observer to detect when messages come into view
         const observer = new IntersectionObserver((entries) => {
             entries.forEach(entry => {
                 if (entry.isIntersecting) {
                     const messageElement = entry.target;
                     const messageId = messageElement.dataset.id;
-
-                    if (messageId && !messageElement.classList.contains('message-sent')) {
+                    if (messageId && messageElement.classList.contains('message-received')) { // Only mark received messages
                         this.chatConnection.markMessageAsRead(messageId);
                         observer.unobserve(messageElement);
                     }
                 }
             });
         }, { threshold: 0.5 });
+        this.messageContainer.querySelectorAll('.message-received[data-id]').forEach(msg => observer.observe(msg));
+    }
 
-        // Observe all unread received messages
+    markAllMessagesAsReadFallback() { // Fallback if IntersectionObserver is not supported
         document.querySelectorAll('.message-received[data-id]').forEach(message => {
-            observer.observe(message);
+            const messageId = message.dataset.id;
+            if (messageId) this.chatConnection.markMessageAsRead(messageId);
         });
     }
 
-    markAllMessagesAsRead() {
-        // Fallback method to mark all messages as read
-        document.querySelectorAll('.message-received[data-id]').forEach(message => {
-            const messageId = message.dataset.id;
-            if (messageId) {
-                this.chatConnection.markMessageAsRead(messageId);
+    markVisibleMessagesAsRead() { // Periodically check for visible unread messages
+        if (!this.messageContainer) return;
+        this.messageContainer.querySelectorAll('.message-received[data-id]').forEach(messageElement => {
+            const messageId = messageElement.dataset.id;
+            // Basic visibility check (can be improved)
+            const rect = messageElement.getBoundingClientRect();
+            const isVisible = rect.top < window.innerHeight && rect.bottom >= 0;
+            if (isVisible && messageId) {
+                // Check if not already marked or being observed to avoid redundant calls
+                if (!messageElement.dataset.observedByIntersection) {
+                    this.chatConnection.markMessageAsRead(messageId);
+                }
             }
         });
     }
 
-    markVisibleMessagesAsRead() {
-        // Mark all currently visible received messages as read
-        const messages = document.querySelectorAll('.message-received[data-id]');
-
-        if (messages.length > 0) {
-            console.log(`Marking ${messages.length} visible messages as read`);
-
-            messages.forEach(message => {
-                const messageId = message.dataset.id;
-                if (messageId) {
-                    console.log(`Marking message as read: ${messageId}`);
-                    this.chatConnection.markMessageAsRead(messageId);
-                }
-            });
-        }
-    }
-
-    // Escape HTML to prevent XSS
     escapeHtml(unsafe) {
-        if (!unsafe) return '';
-
-        return unsafe
-            .replace(/&/g, "&amp;")
-            .replace(/</g, "&lt;")
-            .replace(/>/g, "&gt;")
-            .replace(/"/g, "&quot;")
-            .replace(/'/g, "&#039;");
+        if (unsafe === null || typeof unsafe === 'undefined') return '';
+        return unsafe.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
     }
 
     showErrorMessage(message) {
         const errorDiv = document.createElement('div');
-        errorDiv.className = 'alert alert-danger';
-        errorDiv.textContent = message;
-
-        // Insert at top of message container
-        if (this.messageContainer) {
+        errorDiv.className = 'alert alert-danger mt-2'; errorDiv.textContent = message;
+        if (this.messageForm) {
+            this.messageForm.prepend(errorDiv);
+            setTimeout(() => errorDiv.remove(), 5000);
+        } else if (this.messageContainer) {
             this.messageContainer.prepend(errorDiv);
-
-            // Auto remove after 5 seconds
-            setTimeout(() => {
-                errorDiv.remove();
-            }, 5000);
+            setTimeout(() => errorDiv.remove(), 5000);
         }
     }
-
-    // Event handler implementations
 
     handleReceivedMessage(messageId, senderId, message, sentAt) {
-        if (senderId === this.receiverId) {
-            console.log(`Displaying received message: ${messageId} from ${senderId}`);
-            this.addMessageToUI(message, sentAt, false, messageId);
-            this.chatConnection.markMessageAsRead(messageId);
+        if (senderId === this.receiverId) { // Message is for the currently open chat
+            this.addMessageToUI(message, new Date(sentAt), false, messageId);
+            this.chatConnection.markMessageAsRead(messageId); // Mark as read since it's displayed
         } else {
-            // Handle notification for message from someone else
-            this.showNotification(senderId, message);
+            // This case should ideally be handled by ConversationsListUI for notifications if not on active chat page
+            // Or show a general notification if desired
+            this.showNotification("New message from " + senderId, message);
         }
     }
 
-    handleMessageRead(messageId) {
-        console.log(`Message ${messageId} was read - updating UI`);
-
-        try {
-            // Find all message elements with this ID
-            const messageElements = document.querySelectorAll(`.message-sent[data-id="${messageId}"]`);
-            console.log(`Found ${messageElements.length} messages with ID ${messageId}`);
-
-            if (messageElements.length > 0) {
-                messageElements.forEach(message => {
-                    const timeElement = message.querySelector('.message-time');
-                    if (timeElement) {
-                        // Get the current time text
-                        const timeText = timeElement.firstChild.textContent.trim();
-
-                        // Rebuild the entire time element content
-                        timeElement.innerHTML = '';
-                        timeElement.appendChild(document.createTextNode(timeText + ' '));
-
-                        // Add the read receipt span with the white checkmark for sent messages
-                        const span = document.createElement('span');
-                        span.className = 'ms-1';
-                        span.innerHTML = '<i class="bi bi-check2-all" style="color: white;"></i>'; // Changed to white
-                        timeElement.appendChild(span);
-
-                        console.log('Successfully updated read receipt for message:', messageId);
-                    }
-                });
-            } else {
-                console.warn(`No message elements found with ID: ${messageId}`);
-            }
-        } catch (error) {
-            console.error(`Error updating read receipt for message ${messageId}:`, error);
-        }
+    handleMessageRead(messageId) { // Updates the checkmark for a sent message
+        const messageElements = document.querySelectorAll(`.message-sent[data-id="${messageId}"] .message-time span.ms-1`);
+        messageElements.forEach(span => {
+            span.innerHTML = '<i class="bi bi-check2-all" style="color: white;"></i>';
+        });
     }
 
     handleUserTyping(userId, isTyping) {
-        if (userId === this.receiverId) {
+        if (userId === this.receiverId && this.typingIndicator) {
             this.typingIndicator.style.display = isTyping ? 'block' : 'none';
         }
     }
-
-    handleUserConnected(userId) {
-        if (userId === this.receiverId) {
-            const userStatus = document.getElementById('userStatus');
-            if (userStatus) {
-                userStatus.innerHTML = '<span class="text-success">Online</span>';
-            }
-        }
-    }
-
-    handleUserDisconnected(userId) {
-        if (userId === this.receiverId) {
-            const userStatus = document.getElementById('userStatus');
-            if (userStatus) {
-                userStatus.innerHTML = '<span class="text-muted">Offline</span>';
-            }
-        }
-    }
-
-    handleConnectionStatus(status) {
-        const statusBar = document.getElementById('connectionStatus');
-        if (!statusBar) return;
-
-        if (status === 'reconnecting') {
-            statusBar.textContent = 'Reconnecting...';
-            statusBar.classList.add('alert', 'alert-warning');
-            statusBar.style.display = 'block';
-        } else if (status === 'connected') {
-            statusBar.textContent = 'Connected';
-            statusBar.classList.remove('alert-warning', 'alert-danger');
-            statusBar.classList.add('alert-success');
-
-            // Hide after 2 seconds
-            setTimeout(() => {
-                statusBar.style.display = 'none';
-            }, 2000);
-        } else if (status === 'disconnected') {
-            statusBar.textContent = 'Disconnected. Please refresh the page.';
-            statusBar.classList.remove('alert-warning', 'alert-success');
-            statusBar.classList.add('alert-danger');
-            statusBar.style.display = 'block';
-        }
-    }
-
-    showNotification(senderId, message) {
-        // Only show if browser notifications are supported
-        if (!("Notification" in window)) return;
-
-        // Check if permission is already granted
-        if (Notification.permission === "granted") {
-            new Notification("New message from " + senderId, {
-                body: message,
-                icon: "/images/logo.png"
-            });
-        }
+    handleUserConnected(userId) { /* Update UI if needed */ }
+    handleUserDisconnected(userId) { /* Update UI if needed */ }
+    handleConnectionStatus(status) { /* Update UI for connection status */ }
+    showNotification(title, body) {
+        if (!("Notification" in window) || Notification.permission !== "granted") return;
+        new Notification(title, { body: body, icon: "/images/logo.png" });
     }
 }
 
-// Utility functions
+// Manages real-time updates for the conversations list on Messages/Index.cshtml
+class ConversationsListUI {
+    constructor(currentUserId) {
+        this.currentUserId = currentUserId;
+        this.conversationsListElement = document.getElementById('conversationsList');
+        this.chatConnection = new ChatConnection();
+    }
 
-// Request notification permission on application startup
+    async initialize() {
+        if (!this.conversationsListElement || !this.currentUserId) {
+            console.log("ConversationsListUI: Missing list element or currentUserId. Not initializing.");
+            return;
+        }
+        console.log("ConversationsListUI: Initializing...");
+
+        const connected = await this.chatConnection.initialize();
+        if (!connected) {
+            console.error("ConversationsListUI: Failed to connect SignalR.");
+            return;
+        }
+
+        // Listen for custom events from the hub
+        this.chatConnection.connection.on("UpdateConversationList",
+            (otherUserId, messageContent, sentAt, isSenderCurrentUser, newUnreadCount) => {
+                this.handleUpdateConversationList(otherUserId, messageContent, new Date(sentAt), isSenderCurrentUser, newUnreadCount);
+            });
+
+        this.chatConnection.connection.on("ClearUnreadCountForConversation", (conversationPartnerId) => {
+            this.handleClearUnreadCount(conversationPartnerId);
+        });
+
+        window.addEventListener('beforeunload', () => this.cleanup()); // Add cleanup on page unload
+
+        console.log("ConversationsListUI: Event listeners set up.");
+    }
+
+    cleanup() {
+        if (this.chatConnection) {
+            this.chatConnection.stop();
+        }
+        console.log("ConversationsListUI cleaned up.");
+    }
+
+    formatTimeOnly(date) {
+        const hours = date.getHours().toString().padStart(2, '0');
+        const minutes = date.getMinutes().toString().padStart(2, '0');
+        return `${hours}:${minutes}`;
+    }
+
+    handleUpdateConversationList(otherUserId, messageContent, sentAt, isSenderCurrentUser, newUnreadCount) {
+        console.log("ConversationsListUI: Received UpdateConversationList", { otherUserId, messageContent, sentAt, isSenderCurrentUser, newUnreadCount });
+        if (!this.conversationsListElement) return;
+
+        let conversationItem = this.conversationsListElement.querySelector(`a.list-group-item[data-userid='${otherUserId}']`);
+
+        if (!conversationItem) {
+            console.warn(`Conversation item for user ${otherUserId} not found. Cannot update.`);
+            return;
+        }
+
+        const lastMessageContentElement = conversationItem.querySelector('.last-message-content');
+        const lastMessageTimeElement = conversationItem.querySelector('.last-message-time');
+        const unreadBadgeElement = conversationItem.querySelector('.unread-badge');
+
+        if (lastMessageContentElement) {
+            lastMessageContentElement.textContent = (isSenderCurrentUser ? "You: " : "") + this.escapeHtml(messageContent);
+            if (!isSenderCurrentUser && newUnreadCount > 0) {
+                lastMessageContentElement.classList.add('fw-bold');
+                lastMessageContentElement.classList.remove('text-muted');
+            } else {
+                lastMessageContentElement.classList.remove('fw-bold');
+                lastMessageContentElement.classList.add('text-muted');
+            }
+        }
+
+        if (lastMessageTimeElement) {
+            lastMessageTimeElement.textContent = this.formatTimeOnly(sentAt);
+        }
+
+        if (unreadBadgeElement) {
+            if (newUnreadCount > 0) {
+                unreadBadgeElement.textContent = newUnreadCount;
+                unreadBadgeElement.style.display = '';
+            } else {
+                unreadBadgeElement.textContent = '0';
+                unreadBadgeElement.style.display = 'none';
+            }
+        }
+
+        if (this.conversationsListElement.firstChild !== conversationItem) {
+            this.conversationsListElement.prepend(conversationItem);
+        }
+    }
+
+    handleClearUnreadCount(conversationPartnerId) {
+        console.log("ConversationsListUI: Received ClearUnreadCountForConversation", { conversationPartnerId });
+        if (!this.conversationsListElement) return;
+
+        const conversationItem = this.conversationsListElement.querySelector(`a.list-group-item[data-userid='${conversationPartnerId}']`);
+        if (conversationItem) {
+            const unreadBadgeElement = conversationItem.querySelector('.unread-badge');
+            const lastMessageContentElement = conversationItem.querySelector('.last-message-content');
+
+            if (unreadBadgeElement) {
+                unreadBadgeElement.textContent = '0';
+                unreadBadgeElement.style.display = 'none';
+            }
+            if (lastMessageContentElement && !lastMessageContentElement.textContent.startsWith("You: ")) {
+                lastMessageContentElement.classList.remove('fw-bold');
+                lastMessageContentElement.classList.add('text-muted');
+            }
+        }
+    }
+
+    escapeHtml(unsafe) {
+        if (unsafe === null || typeof unsafe === 'undefined') return '';
+        return unsafe.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+    }
+}
+
+
+// Utility functions
 function requestNotificationPermission() {
     if (!("Notification" in window)) return;
-
     if (Notification.permission !== "granted" && Notification.permission !== "denied") {
         Notification.requestPermission();
     }
 }
 
-// Initialize chat when document is ready
+// Initialize chat systems when document is ready
 document.addEventListener('DOMContentLoaded', function () {
-    // Request notification permission
     requestNotificationPermission();
 
-    // Initialize chat if we're on a conversation page
     const receiverIdElement = document.getElementById('receiverId');
+    const conversationsListElement = document.getElementById('conversationsList');
+    const currentUserIdElement = document.getElementById('currentUserId');
+
+    // Ensure previous managers are cleaned up if they exist on the window object
+    // This is more of a safeguard, 'beforeunload' is the primary cleanup mechanism for page navigation
+    if (window.currentChatUI && typeof window.currentChatUI.cleanup === 'function' && !receiverIdElement) {
+        window.currentChatUI.cleanup();
+        window.currentChatUI = null;
+    }
+    if (window.conversationsListManager && typeof window.conversationsListManager.cleanup === 'function' && !conversationsListElement) {
+        window.conversationsListManager.cleanup();
+        window.conversationsListManager = null;
+    }
+
+
     if (receiverIdElement) {
         const receiverId = receiverIdElement.value;
-        const chatUI = new ChatUI(receiverId);
-        chatUI.initialize();
-
-        // Make this instance globally accessible to avoid multiple connections
-        window.currentChatUI = chatUI;
+        if (window.conversationsListManager && typeof window.conversationsListManager.cleanup === 'function') {
+            window.conversationsListManager.cleanup(); // Clean up list manager if navigating to a chat
+            window.conversationsListManager = null;
+        }
+        if (!window.currentChatUI) {
+            window.currentChatUI = new ChatUI(receiverId);
+            window.currentChatUI.initialize();
+        }
+    } else if (conversationsListElement && currentUserIdElement) {
+        const currentUserId = currentUserIdElement.value;
+        if (window.currentChatUI && typeof window.currentChatUI.cleanup === 'function') {
+            window.currentChatUI.cleanup(); // Clean up chat UI if navigating to the list
+            window.currentChatUI = null;
+        }
+        if (!window.conversationsListManager) {
+            window.conversationsListManager = new ConversationsListUI(currentUserId);
+            window.conversationsListManager.initialize();
+        }
     }
 });
