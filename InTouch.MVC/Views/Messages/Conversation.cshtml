@@ -22,7 +22,7 @@
                             <img src="@(string.IsNullOrEmpty(Model.OtherUser.ProfilePicture) ? "/images/default-profile.jpg" : Model.OtherUser.ProfilePicture)"
                                  class="rounded-circle" alt="Profile" style="width: 64px; height: 64px; object-fit: cover;" />
 
-                            @if (DateTime.UtcNow - Model.LastActive < TimeSpan.FromMinutes(5))
+                            @if (DateTime.UtcNow - Model.LastActive < TimeSpan.FromMinutes(1))
                             {
                                 <span class="position-absolute bottom-0 end-0 bg-success rounded-circle p-1"
                                       style="width:12px; height:12px; border: 2px solid white;"></span>
@@ -32,7 +32,7 @@
                             <h5 class="mb-0">@Model.OtherUser.FirstName @Model.OtherUser.LastName</h5>
                             <p class="text-muted mb-0">@@@Model.OtherUser.UserName</p>
                             <small class="text-muted">
-                                @if (DateTime.UtcNow - Model.LastActive < TimeSpan.FromMinutes(5))
+                                @if (DateTime.UtcNow - Model.LastActive < TimeSpan.FromMinutes(1))
                                 {
                                     <span class="text-success">Online</span>
                                 }
