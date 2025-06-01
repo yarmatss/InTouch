@@ -3,6 +3,13 @@
  * Handles real-time messaging functionality
  */
 
+function getCookie(name) {
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; ${name}=`);
+    if (parts.length === 2) return parts.pop().split(';').shift();
+    return null;
+}
+
 // Main SignalR connection management
 class ChatConnection {
     constructor() {
@@ -72,6 +79,15 @@ class ChatConnection {
             } catch (err) {
                 console.error("Error stopping SignalR connection: ", err);
             }
+        }
+    }
+
+    async updateLastActiveStatus() {
+        if (!this.isConnected) return;
+        try {
+            await this.connection.invoke("UpdateLastActive");
+        } catch (error) {
+            console.error("Error updating last active status:", error);
         }
     }
 
@@ -208,6 +224,12 @@ class ChatUI {
         this.chatConnection.handleMessageSent = this.handleMessageSent.bind(this); // For sent messages by current user
 
         this.setupEventListeners();
+
+        // Start periodic last active status updates
+        this.lastActiveInterval = setInterval(() => {
+            this.chatConnection.updateLastActiveStatus();
+        }, 30000); // Update every 30 seconds
+
         setTimeout(() => {
             this.markVisibleMessagesAsRead();
             this.checkUnreadInterval = setInterval(() => this.markVisibleMessagesAsRead(), 5000);
@@ -250,13 +272,21 @@ class ChatUI {
     }
 
     formatTimestamp(time) {
+        const userTimezone = getCookie('user_timezone') || 'UTC'; // Get user timezone from cookie
         const now = new Date();
         const messageDate = new Date(time);
         const diffMs = now - messageDate;
         const diffMins = Math.floor(diffMs / 60000);
         const diffHours = Math.floor(diffMins / 60);
         const diffDays = Math.floor(diffHours / 24);
-        const timeOptions = { hour: '2-digit', minute: '2-digit', hour12: false };
+
+        // Use the timezone from cookie
+        const timeOptions = {
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false,
+            timeZone: userTimezone
+        };
 
         if (messageDate.toDateString() === now.toDateString()) {
             if (diffMins < 1) return 'Just now';
@@ -268,7 +298,18 @@ class ChatUI {
             const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
             return `${days[messageDate.getDay()]}, ${messageDate.toLocaleTimeString('en-US', timeOptions)}`;
         }
-        return messageDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: messageDate.getFullYear() !== now.getFullYear() ? 'numeric' : undefined }) + ' ' + messageDate.toLocaleTimeString('en-US', timeOptions);
+
+        const dateTimeOptions = {
+            month: 'short',
+            day: 'numeric',
+            year: messageDate.getFullYear() !== now.getFullYear() ? 'numeric' : undefined,
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false,
+            timeZone: userTimezone
+        };
+
+        return messageDate.toLocaleString('en-US', dateTimeOptions);
     }
 
     updateTimestamps() {
@@ -288,6 +329,7 @@ class ChatUI {
     cleanup() {
         if (this.timestampUpdateInterval) clearInterval(this.timestampUpdateInterval);
         if (this.checkUnreadInterval) clearInterval(this.checkUnreadInterval);
+        if (this.lastActiveInterval) clearInterval(this.lastActiveInterval);
         if (window.checkSignalRStatus) clearInterval(window.checkSignalRStatus);
         if (this.chatConnection) {
             this.chatConnection.stop(); // Stop the connection
@@ -297,12 +339,17 @@ class ChatUI {
 
     addMessageToUI(content, time, isSentByCurrentUser, messageId = null) {
         if (!this.messageContainer) return;
-        const messageDate = new Date(time).toDateString();
+        const userTimezone = getCookie('user_timezone') || 'UTC';
+        const messageDate = new Date(time);
+        const dateOptions = { month: 'long', day: 'numeric', year: 'numeric', timeZone: userTimezone };
+
         const dateHeaders = Array.from(this.messageContainer.querySelectorAll('.date-header'));
-        const needsDateHeader = !dateHeaders.some(header => header.textContent.includes(new Date(time).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })));
+        const needsDateHeader = !dateHeaders.some(header =>
+            header.textContent.includes(messageDate.toLocaleDateString('en-US', dateOptions))
+        );
 
         if (needsDateHeader) {
-            const fullDate = new Date(time).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+            const fullDate = messageDate.toLocaleDateString('en-US', dateOptions);
             const dateHeaderElement = document.createElement('div');
             dateHeaderElement.className = 'text-center my-3';
             dateHeaderElement.innerHTML = `<span class="badge bg-light text-dark date-header">${fullDate}</span>`;
@@ -310,22 +357,36 @@ class ChatUI {
         }
 
         const formattedTime = this.formatTimestamp(time);
-        const fullTimestamp = new Date(time).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        const fullTimestampOptions = {
+            month: 'short',
+            day: 'numeric',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: false,
+            timeZone: userTimezone
+        };
+
+        const fullTimestamp = messageDate.toLocaleString('en-US', fullTimestampOptions);
+
+        // Rest of the method remains the same
         const messageDiv = document.createElement('div');
         messageDiv.className = `d-flex ${isSentByCurrentUser ? 'justify-content-end' : 'justify-content-start'} mb-2`;
-        const statusIcon = isSentByCurrentUser ? '<i class="bi bi-check2" style="color: white;"></i>' : ''; // Initial sent icon
+        const statusIcon = isSentByCurrentUser ? '<i class="bi bi-check2" style="color: white;"></i>' : '';
 
         messageDiv.innerHTML = `
-            <div class="message ${isSentByCurrentUser ? 'message-sent' : 'message-received'}" ${messageId ? `data-id="${messageId}"` : ''}>
-                <div class="message-content">${this.escapeHtml(content)}</div>
-                <div class="message-time" title="${fullTimestamp}">
-                    ${formattedTime}
-                    ${isSentByCurrentUser ? `<span class="ms-1">${statusIcon}</span>` : ''}
-                </div>
-            </div>`;
+        <div class="message ${isSentByCurrentUser ? 'message-sent' : 'message-received'}" ${messageId ? `data-id="${messageId}"` : ''}>
+            <div class="message-content">${this.escapeHtml(content)}</div>
+            <div class="message-time" title="${fullTimestamp}">
+                ${formattedTime}
+                ${isSentByCurrentUser ? `<span class="ms-1">${statusIcon}</span>` : ''}
+            </div>
+        </div>`;
         this.messageContainer.appendChild(messageDiv);
         this.scrollToBottom();
     }
+
 
     scrollToBottom() {
         if (this.messageContainer) this.messageContainer.scrollTop = this.messageContainer.scrollHeight;
@@ -466,9 +527,13 @@ class ConversationsListUI {
     }
 
     formatTimeOnly(date) {
-        const hours = date.getHours().toString().padStart(2, '0');
-        const minutes = date.getMinutes().toString().padStart(2, '0');
-        return `${hours}:${minutes}`;
+        const userTimezone = getCookie('user_timezone') || 'UTC';
+        return date.toLocaleTimeString('en-US', {
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false,
+            timeZone: userTimezone
+        });
     }
 
     handleUpdateConversationList(otherUserId, messageContent, sentAt, isSenderCurrentUser, newUnreadCount) {
