@@ -29,9 +29,10 @@ WORKDIR /app
 COPY --from=publish /app/publish .
 
 # Create directories for certificates and keys with proper permissions
-RUN mkdir -p /app/certs /app/keys && \
+RUN mkdir -p /app/certs /app/keys /app/wwwroot/uploads && \
     chmod 755 /app/certs && \
-    chmod 777 /app/keys
+    chmod 777 /app/keys && \
+    chmod 777 /app/wwwroot/uploads
 
 # Now set the user after permissions are configured
 USER $APP_UID
