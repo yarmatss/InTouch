@@ -12,7 +12,7 @@ public class UploadMusicViewModel
     public string Title { get; set; }
 
     [Display(Name = "Description")]
-    public string Description { get; set; }
+    public string? Description { get; set; }
 
     [Display(Name = "Genre")]
     public string Genre { get; set; }
