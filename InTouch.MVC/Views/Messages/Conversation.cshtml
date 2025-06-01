@@ -164,16 +164,18 @@
     <script src="~/js/chat.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            const receiverId = document.getElementById('receiverId').value;
-            const chatUI = new ChatUI(receiverId);
-            chatUI.initialize();
+            // Only set up the status checking
+            console.log("Starting chat with receiverId:", document.getElementById('receiverId').value);
 
-            // Add this to check connection state
-            console.log("Starting chat with receiverId:", receiverId);
-            window.checkSignalRStatus = setInterval(() => {
-                const status = chatUI.chatConnection.isConnected ? "CONNECTED" : "DISCONNECTED";
-                console.log("SignalR status:", status);
-            }, 5000);
+            // We'll access the chatUI instance that's created by chat.js
+            setTimeout(() => {
+                if (window.currentChatUI) {
+                    window.checkSignalRStatus = setInterval(() => {
+                        const status = window.currentChatUI.chatConnection.isConnected ? "CONNECTED" : "DISCONNECTED";
+                        console.log("SignalR status:", status);
+                    }, 5000);
+                }
+            }, 1000);
         });
     </script>
 }

@@ -657,5 +657,8 @@ document.addEventListener('DOMContentLoaded', function () {
         const receiverId = receiverIdElement.value;
         const chatUI = new ChatUI(receiverId);
         chatUI.initialize();
+
+        // Make this instance globally accessible to avoid multiple connections
+        window.currentChatUI = chatUI;
     }
 });
