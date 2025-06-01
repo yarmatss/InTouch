@@ -57,7 +57,7 @@ public class PostService : IPostService
         {
             Content = content,
             UserId = userId,
-            CreatedAt = DateTime.Now
+            CreatedAt = DateTime.UtcNow
             // No need to set MediaUrl if it's nullable - it will default to null
         };
 
@@ -95,7 +95,7 @@ public class PostService : IPostService
         }
 
         post.Content = content;
-        post.UpdatedAt = DateTime.Now;
+        post.UpdatedAt = DateTime.UtcNow;
 
         _context.Update(post);
         await _context.SaveChangesAsync();
@@ -180,7 +180,7 @@ public class PostService : IPostService
         var comment = new Comment
         {
             Content = content,
-            CreatedAt = DateTime.Now,
+            CreatedAt = DateTime.UtcNow,
             PostId = postId,
             UserId = userId
         };

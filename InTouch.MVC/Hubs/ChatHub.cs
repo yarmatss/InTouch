@@ -29,7 +29,7 @@ public class ChatHub : Hub
             var user = await _context.Users.FindAsync(userId);
             if (user != null)
             {
-                user.LastActive = DateTime.Now;
+                user.LastActive = DateTime.UtcNow;
                 await _context.SaveChangesAsync();
             }
 
@@ -55,7 +55,7 @@ public class ChatHub : Hub
             var user = await _context.Users.FindAsync(userId);
             if (user != null)
             {
-                user.LastActive = DateTime.Now;
+                user.LastActive = DateTime.UtcNow;
                 await _context.SaveChangesAsync();
             }
 
@@ -96,7 +96,7 @@ public class ChatHub : Hub
                 Content = message,
                 SenderId = senderId,
                 ReceiverId = receiverId,
-                SentAt = DateTime.Now,
+                SentAt = DateTime.UtcNow,
                 IsRead = false
             };
 

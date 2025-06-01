@@ -93,7 +93,7 @@ public class FriendService : IFriendService
             RequesterId = requesterId,
             AddresseeId = addresseeId,
             Status = FriendshipStatusEnum.Pending,
-            RequestDate = DateTime.Now
+            RequestDate = DateTime.UtcNow
         };
 
         _context.Friendships.Add(friendship);
@@ -113,7 +113,7 @@ public class FriendService : IFriendService
 
         // Accept friendship
         friendship.Status = FriendshipStatusEnum.Accepted;
-        friendship.AcceptedDate = DateTime.Now;
+        friendship.AcceptedDate = DateTime.UtcNow;
 
         _context.Update(friendship);
         await _context.SaveChangesAsync();

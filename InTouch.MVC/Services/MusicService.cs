@@ -87,7 +87,7 @@ public class MusicService : IMusicService
             Genre = genre,
             MusicUrl = musicUrl,
             CoverUrl = coverUrl,
-            UploadDate = DateTime.Now,
+            UploadDate = DateTime.UtcNow,
             UserId = userId
         };
 

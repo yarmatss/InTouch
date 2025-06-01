@@ -31,7 +31,7 @@
                                             <img src="@(string.IsNullOrEmpty(user.ProfilePicture) ? "/images/default-profile.jpg" : user.ProfilePicture)"
                                                  class="rounded-circle" alt="Profile" style="width: 48px; height: 48px; object-fit: cover;" />
                                                  
-                                            @if (DateTime.Now - user.LastActive < TimeSpan.FromMinutes(5))
+                                            @if (DateTime.UtcNow - user.LastActive < TimeSpan.FromMinutes(5))
                                             {
                                                 <span class="position-absolute bottom-0 end-0 bg-success rounded-circle p-1"
                                                       style="width:10px; height:10px; border: 2px solid white;"></span>
@@ -42,7 +42,7 @@
                                                 <h6 class="mb-0 text-truncate">@user.FirstName @user.LastName</h6>
                                                 @if (lastMessage != null)
                                                 {
-                                                    <small>@lastMessage.SentAt.ToString("h:mm tt")</small>
+                                                    <small>@lastMessage.SentAt.ToLocalTimeString("HH:mm", "en-US")</small>
                                                 }
                                             </div>
                                             <p class="mb-0 text-truncate small @(unreadCount > 0 ? "fw-bold" : "text-muted")">

@@ -59,6 +59,8 @@ builder.Services.AddScoped<IMessageService, MessageService>();
 builder.Services.AddScoped<IVideoService, VideoService>();
 builder.Services.AddScoped<IMusicService, MusicService>();
 
+builder.Services.AddMemoryCache();
+
 builder.Services.AddControllersWithViews();
 builder.Services.AddRazorPages();
 
@@ -80,6 +82,13 @@ app.UseHttpsRedirection();
 
 app.UseStaticFiles();
 
+// Ensure uploads directory exists
+var uploadsDir = Path.Combine(builder.Environment.WebRootPath, "uploads");
+if (!Directory.Exists(uploadsDir))
+{
+    Directory.CreateDirectory(uploadsDir);
+}
+
 app.UseStaticFiles(new StaticFileOptions
 {
     FileProvider = new PhysicalFileProvider(
@@ -91,6 +100,8 @@ app.UseRouting();
 
 app.UseAuthentication();
 app.UseAuthorization();
+
+app.UseMiddleware<LastActivityMiddleware>();
 
 // Add SignalR hub
 app.MapHub<ChatHub>("/chathub");

@@ -42,7 +42,7 @@
                                 <a asp-controller="Account" asp-action="ViewProfile" asp-route-id="@post.UserId" class="text-decoration-none fw-bold">
                                     @(post.User != null ? $"{post.User.FirstName} {post.User.LastName}" : "Unknown User")
                                 </a>
-                                <div class="text-muted small">@post.CreatedAt.ToString("MMM d, yyyy h:mm tt")</div>
+                                <div class="text-muted small">@post.CreatedAt.ToLocalTimeString("MMM d, yyyy HH:mm", "en-US")</div>
                             </div>
                         </div>
                     </div>

@@ -55,7 +55,7 @@ public class AccountController : Controller
                 LastName = model.LastName!,
                 Bio = string.Empty,
                 ProfilePicture = string.Empty, // Default profile picture can be set later
-                LastActive = DateTime.Now
+                LastActive = DateTime.UtcNow
             };
 
             var result = await _userManager.CreateAsync(user, model.Password!);
@@ -108,7 +108,7 @@ public class AccountController : Controller
                 var user = await _userManager.FindByNameAsync(model.Username!);
                 if (user != null)
                 {
-                    user.LastActive = DateTime.Now;
+                    user.LastActive = DateTime.UtcNow;
                     await _userManager.UpdateAsync(user);
                 }
 

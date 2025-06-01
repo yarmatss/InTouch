@@ -29,7 +29,7 @@
                     {
                         <div class="text-center my-3">
                             <span class="badge bg-light text-dark">
-                                @message.SentAt.ToString("MMMM d, yyyy")
+                                @message.SentAt.ToLocalTimeString("MMMM d, yyyy", "en-US")
                             </span>
                         </div>
                         previousDate = message.SentAt;
@@ -41,7 +41,7 @@
                                 @message.Content
                             </div>
                             <div class="message-time">
-                                @message.SentAt.ToString("h:mm tt")
+                                @message.SentAt.ToLocalTimeString("HH:mm")
                                 @if (isCurrentUser && message.IsRead)
                                 {
                                     <span class="ms-1"><i class="bi bi-check2-all text-primary"></i></span>

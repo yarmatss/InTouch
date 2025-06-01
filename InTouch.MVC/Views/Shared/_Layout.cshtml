@@ -49,12 +49,22 @@
 
     <footer class="border-top footer text-muted">
         <div class="container">
-            &copy; @DateTime.Now.Year - InTouch
+            &copy; @DateTime.UtcNow.Year - InTouch
         </div>
     </footer>
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
+    <script>
+        // Detect and store the user's timezone when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            // Get timezone name using Intl API (modern browsers)
+            const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+            // Store in a cookie
+            document.cookie = `user_timezone=${timezone}; path=/; max-age=${60*60*24*365}`;
+        });
+    </script>
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

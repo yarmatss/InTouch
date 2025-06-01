@@ -59,7 +59,7 @@ public class MessageService : IMessageService
             Content = content,
             SenderId = senderId,
             ReceiverId = receiverId,
-            SentAt = DateTime.Now,
+            SentAt = DateTime.UtcNow,
             IsRead = false
         };
 

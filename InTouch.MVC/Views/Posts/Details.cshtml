@@ -21,7 +21,7 @@
                             @(Model.User != null ? $"{Model.User.FirstName} {Model.User.LastName}" : "Unknown User")
                         </a>
                         <div class="text-muted small">
-                            @Model.CreatedAt.ToString("MMM d, yyyy h:mm tt")
+                            @Model.CreatedAt.ToLocalTimeString("MMM d, yyyy HH:mm", "en-US")
                             @if (Model.UpdatedAt.HasValue)
                             {
                                 <span class="ms-2">(edited)</span>
@@ -121,7 +121,7 @@
                                             <a asp-controller="Account" asp-action="ViewProfile" asp-route-id="@comment.UserId" class="text-decoration-none fw-bold">
                                                 @(comment.User != null ? $"{comment.User.FirstName} {comment.User.LastName}" : "Unknown User")
                                             </a>
-                                            <small class="text-muted">@comment.CreatedAt.ToString("MMM d, h:mm tt")</small>
+                                            <small class="text-muted">@comment.CreatedAt.ToLocalTimeString("MMM d, HH:mm tt", "en-US")</small>
                                         </div>
                                         <p class="mb-0">@comment.Content</p>
                                     </div>

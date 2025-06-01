@@ -80,7 +80,7 @@ public class VideoService : IVideoService
             Description = description,
             VideoUrl = videoUrl,
             ThumbnailUrl = thumbnailUrl,
-            UploadDate = DateTime.Now,
+            UploadDate = DateTime.UtcNow,
             Views = 0,
             UserId = userId
         };

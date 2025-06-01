@@ -16,7 +16,7 @@
                     @(Model.User != null ? $"{Model.User.FirstName} {Model.User.LastName}" : "Unknown User")
                 </a>
                 <div class="text-muted small">
-                    @Model.CreatedAt.ToString("MMM d, yyyy h:mm tt")
+                    @Model.CreatedAt.ToLocalTimeString("MMM d, yyyy HH:mm", "en-US")
                     @if (Model.UpdatedAt.HasValue)
                     {
                         <span class="ms-2">(edited)</span>
