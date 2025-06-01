@@ -196,4 +196,21 @@ public class ChatHub : Hub
             }
         }
     }
+
+    public async Task UpdateLastActive()
+    {
+        var userId = Context.UserIdentifier;
+        if (userId != null)
+        {
+            var user = await _context.Users.FindAsync(userId);
+            if (user != null)
+            {
+                user.LastActive = DateTime.UtcNow;
+                await _context.SaveChangesAsync();
+
+                // Broadcast to others that this user is active
+                await Clients.Others.SendAsync("UserActive", userId, DateTime.UtcNow);
+            }
+        }
+    }
 }

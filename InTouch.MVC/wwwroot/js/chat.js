@@ -274,8 +274,15 @@ class ChatUI {
         // Set up UI event listeners
         this.setupEventListeners();
 
-        // Mark all visible messages as read
-        this.markVisibleMessagesAsRead();
+        // Mark all visible messages as read - Add a small delay to ensure DOM is ready
+        setTimeout(() => {
+            this.markVisibleMessagesAsRead();
+
+            // Set up periodic checking for unread messages
+            this.checkUnreadInterval = setInterval(() => {
+                this.markVisibleMessagesAsRead();
+            }, 5000); // Check every 5 seconds
+        }, 1000);
 
         // Scroll to bottom of messages
         this.scrollToBottom();
@@ -325,6 +332,14 @@ class ChatUI {
         // DO NOT add message to UI here - we wait for server confirmation via handleMessageSent
     }
 
+    startHeartbeat() {
+        this.heartbeatInterval = setInterval(() => {
+            if (this.chatConnection.isConnected) {
+                this.chatConnection.connection.invoke("UpdateLastActive");
+            }
+        }, 30000); // Every 30 seconds
+    }
+
     handleInput() {
         const message = this.messageInput.value.trim();
 
@@ -349,6 +364,9 @@ class ChatUI {
         const diffHours = Math.floor(diffMins / 60);
         const diffDays = Math.floor(diffHours / 24);
 
+        // Define options for 24-hour time format
+        const timeOptions = { hour: '2-digit', minute: '2-digit', hour12: false };
+
         // For messages from today
         if (messageDate.toDateString() === now.toDateString()) {
             // Very recent messages (less than 1 minute ago)
@@ -360,16 +378,16 @@ class ChatUI {
                 return `${diffMins} min${diffMins !== 1 ? 's' : ''} ago`;
             }
             // Messages from today but over an hour ago
-            return messageDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            return messageDate.toLocaleTimeString('en-US', timeOptions);
         }
-        // For messages from yesterday 
+        // For messages from yesterday
         else if (diffDays === 1) {
-            return `Yesterday, ${messageDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+            return `Yesterday, ${messageDate.toLocaleTimeString('en-US', timeOptions)}`;
         }
         // For messages from this week (less than 7 days ago)
         else if (diffDays < 7) {
             const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-            return `${days[messageDate.getDay()]}, ${messageDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+            return `${days[messageDate.getDay()]}, ${messageDate.toLocaleTimeString('en-US', timeOptions)}`;
         }
         // For older messages
         else {
@@ -377,7 +395,7 @@ class ChatUI {
                 month: 'short',
                 day: 'numeric',
                 year: messageDate.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
-            }) + ' ' + messageDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            }) + ' ' + messageDate.toLocaleTimeString('en-US', timeOptions);
         }
     }
 
@@ -411,6 +429,10 @@ class ChatUI {
     cleanup() {
         if (this.timestampUpdateInterval) {
             clearInterval(this.timestampUpdateInterval);
+        }
+
+        if (this.checkUnreadInterval) {
+            clearInterval(this.checkUnreadInterval);
         }
 
         // Remove the SignalR connection status interval
@@ -452,7 +474,7 @@ class ChatUI {
         const messageDiv = document.createElement('div');
         messageDiv.className = `d-flex ${isSent ? 'justify-content-end' : 'justify-content-start'} mb-2`;
 
-        const statusIcon = isSent ? '<i class="bi bi-check2"></i>' : '';
+        const statusIcon = isSent ? '<i class="bi bi-check2" style="color: white;"></i>' : ''; // Default to single check, white for sent
 
         messageDiv.innerHTML = `
         <div class="message ${isSent ? 'message-sent' : 'message-received'}" ${messageId ? `data-id="${messageId}"` : ''}>
@@ -514,12 +536,19 @@ class ChatUI {
 
     markVisibleMessagesAsRead() {
         // Mark all currently visible received messages as read
-        document.querySelectorAll('.message-received[data-id]').forEach(message => {
-            const messageId = message.dataset.id;
-            if (messageId) {
-                this.chatConnection.markMessageAsRead(messageId);
-            }
-        });
+        const messages = document.querySelectorAll('.message-received[data-id]');
+
+        if (messages.length > 0) {
+            console.log(`Marking ${messages.length} visible messages as read`);
+
+            messages.forEach(message => {
+                const messageId = message.dataset.id;
+                if (messageId) {
+                    console.log(`Marking message as read: ${messageId}`);
+                    this.chatConnection.markMessageAsRead(messageId);
+                }
+            });
+        }
     }
 
     // Escape HTML to prevent XSS
@@ -564,11 +593,38 @@ class ChatUI {
     }
 
     handleMessageRead(messageId) {
-        // Update read status for message
-        console.log(`Updating read status for message: ${messageId}`);
-        const messageElement = document.querySelector(`.message[data-id="${messageId}"] .message-time i`);
-        if (messageElement) {
-            messageElement.className = "bi bi-check2-all text-primary";
+        console.log(`Message ${messageId} was read - updating UI`);
+
+        try {
+            // Find all message elements with this ID
+            const messageElements = document.querySelectorAll(`.message-sent[data-id="${messageId}"]`);
+            console.log(`Found ${messageElements.length} messages with ID ${messageId}`);
+
+            if (messageElements.length > 0) {
+                messageElements.forEach(message => {
+                    const timeElement = message.querySelector('.message-time');
+                    if (timeElement) {
+                        // Get the current time text
+                        const timeText = timeElement.firstChild.textContent.trim();
+
+                        // Rebuild the entire time element content
+                        timeElement.innerHTML = '';
+                        timeElement.appendChild(document.createTextNode(timeText + ' '));
+
+                        // Add the read receipt span with the white checkmark for sent messages
+                        const span = document.createElement('span');
+                        span.className = 'ms-1';
+                        span.innerHTML = '<i class="bi bi-check2-all" style="color: white;"></i>'; // Changed to white
+                        timeElement.appendChild(span);
+
+                        console.log('Successfully updated read receipt for message:', messageId);
+                    }
+                });
+            } else {
+                console.warn(`No message elements found with ID: ${messageId}`);
+            }
+        } catch (error) {
+            console.error(`Error updating read receipt for message ${messageId}:`, error);
         }
     }
 

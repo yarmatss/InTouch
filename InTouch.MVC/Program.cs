@@ -51,7 +51,7 @@ builder.Services.AddSignalR();
 
 builder.Services.AddHttpContextAccessor();
 
-builder.Services.AddSingleton<IUserIdProvider, NameUserIdProvider>();
+// builder.Services.AddSingleton<IUserIdProvider, NameUserIdProvider>();
 
 builder.Services.AddScoped<IFileStorageService, LocalFileStorageService>();
 builder.Services.AddScoped<IPostService, PostService>();

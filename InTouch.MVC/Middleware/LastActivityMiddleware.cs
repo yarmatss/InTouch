@@ -24,7 +24,11 @@ public class LastActivityMiddleware
             {
                 var cacheKey = $"LastActive_{userId}";
 
-                if (!_cache.TryGetValue(cacheKey, out _))
+                // Update more frequently for chat pages
+                bool isChatPage = context.Request.Path.Value?.Contains("/Messages", StringComparison.OrdinalIgnoreCase) == true;
+                bool shouldUpdate = !_cache.TryGetValue(cacheKey, out _);
+
+                if (shouldUpdate || isChatPage)
                 {
                     var user = await userManager.FindByIdAsync(userId);
                     if (user != null)
@@ -32,8 +36,9 @@ public class LastActivityMiddleware
                         user.LastActive = DateTime.UtcNow;
                         await userManager.UpdateAsync(user);
 
-                        // Cache for 1 minute to prevent frequent updates
-                        _cache.Set(cacheKey, true, TimeSpan.FromMinutes(1));
+                        // Cache for shorter time if on messaging page
+                        TimeSpan cacheTime = isChatPage ? TimeSpan.FromSeconds(15) : TimeSpan.FromMinutes(1);
+                        _cache.Set(cacheKey, true, cacheTime);
                     }
                 }
             }

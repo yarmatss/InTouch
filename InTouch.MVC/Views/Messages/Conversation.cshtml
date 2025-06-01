@@ -77,22 +77,22 @@
                                 {
                                     <div class="text-center my-3">
                                         <span class="badge bg-light text-dark">
-                                            @message.SentAt.ToString("MMMM d, yyyy")
+                                            @message.SentAt.ToLocalTimeString("MMMM d, yyyy", "en-US")
                                         </span>
                                     </div>
                                     previousDate = message.SentAt;
                                 }
 
                                 <div class="d-flex @(isCurrentUser ? "justify-content-end" : "justify-content-start") mb-2">
-                                    <div class="message @(isCurrentUser ? "message-sent" : "message-received")">
+                                    <div class="message @(isCurrentUser ? "message-sent" : "message-received")" data-id="@message.Id">
                                         <div class="message-content">
                                             @message.Content
                                         </div>
-                                        <div class="message-time">
+                                        <div class="message-time" title="@message.SentAt.ToString("yyyy-MM-dd HH:mm:ss")">
                                             @message.SentAt.ToLocalTimeString("HH:mm", "en-US")
                                             @if (isCurrentUser && message.IsRead)
                                             {
-                                                <span class="ms-1"><i class="bi bi-check2-all text-primary"></i></span>
+                                                <span class="ms-1"><i class="bi bi-check2-all" style="color: white;"></i></span>
                                             }
                                             else if (isCurrentUser)
                                             {
@@ -142,6 +142,12 @@
             border-bottom-right-radius: 5px;
             align-self: flex-end;
         }
+
+            /* Ensure the checkmark icon in sent messages is also white */
+            .message-sent .message-time .bi-check2,
+            .message-sent .message-time .bi-check2-all {
+                color: white !important; /* Use !important to override inline styles if necessary, or ensure inline styles are removed */
+            }
 
         .message-received {
             background-color: #f0f2f5;
