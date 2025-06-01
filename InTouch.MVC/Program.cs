@@ -3,11 +3,21 @@ using InTouch.MVC.Hubs;
 using InTouch.MVC.Middleware;
 using InTouch.MVC.Models;
 using InTouch.MVC.Services;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.FileProviders;
+using System.Security.Cryptography.X509Certificates;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddDataProtection()
+        .PersistKeysToFileSystem(new DirectoryInfo("/app/keys"))
+        .SetApplicationName("InTouch")
+        .ProtectKeysWithCertificate(
+            X509Certificate2.CreateFromPemFile(
+                "/app/certs/webapp.chained.crt",
+                "/app/certs/webapp.key"));
 
 // Add services to the container.
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
@@ -65,6 +75,17 @@ builder.Services.AddControllersWithViews();
 builder.Services.AddRazorPages();
 
 var app = builder.Build();
+
+using (var scope = app.Services.CreateScope())
+{
+    await Task.Delay(10000); // Wait for Postgresql to start
+
+    var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+    if (dbContext.Database.GetPendingMigrations().Any())
+    {
+        dbContext.Database.Migrate();
+    }
+}
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
