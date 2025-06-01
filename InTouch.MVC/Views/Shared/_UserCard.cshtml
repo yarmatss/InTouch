@@ -18,7 +18,7 @@
                 else
                 {
                     <small class="text-muted">
-                        Last active @Model.LastActive.ToString("MMM d")
+                        Last active @Model.LastActive.ToLocalTimeString("MMM d", "en-US")
                     </small>
                 }
             </div>

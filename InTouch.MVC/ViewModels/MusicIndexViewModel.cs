@@ -4,6 +4,6 @@ namespace InTouch.MVC.ViewModels;
 
 public class MusicIndexViewModel
 {
-    public List<Music> Music { get; set; }
-    public string SortBy { get; set; }
+    public IEnumerable<Music> Music { get; set; } = new List<Music>();
+    public string SortBy { get; set; } = "date"; // default sort - options: date, genre, artist, user
 }

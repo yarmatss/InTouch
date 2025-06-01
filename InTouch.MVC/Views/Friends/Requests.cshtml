@@ -38,7 +38,7 @@
                                     <h5 class="card-title mb-0">@request.Requester?.FirstName @request.Requester?.LastName</h5>
                                     <p class="text-muted mb-0">@@@request.Requester?.UserName</p>
                                     <small class="text-muted">
-                                        <i class="bi bi-clock"></i> Request sent @request.RequestDate.ToString("MMM d, yyyy")
+                                        <i class="bi bi-clock"></i> Request sent @request.RequestDate.ToLocalTimeString("MMM d, yyyy", "en-US")
                                     </small>
                                 </div>
                             </div>

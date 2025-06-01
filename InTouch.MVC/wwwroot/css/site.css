@@ -22,6 +22,19 @@ body {
     background-color: white;
 }
 
+.like-stats {
+    cursor: pointer;
+    transition: opacity 0.2s, transform 0.1s;
+}
+
+    .like-stats:hover {
+        opacity: 0.8;
+    }
+
+    .like-stats:active {
+        transform: scale(0.97);
+    }
+
 /* Navbar styling */
 .navbar {
     padding: 0.5rem 1rem;
@@ -61,6 +74,34 @@ body {
     color: #212529;
     border-bottom-left-radius: 5px;
     align-self: flex-start;
+}
+
+/* Media content styling */
+.post-image,
+.media-container img.post-image {
+    object-fit: contain;
+    max-height: 450px;
+    width: 100%;
+    border-radius: 0.25rem;
+}
+
+.video-container,
+.media-container .video-container {
+    position: relative;
+    max-height: 450px;
+    overflow: hidden;
+    border-radius: 0.25rem;
+}
+
+    .media-container .video-container video {
+        width: 100%;
+        max-height: 450px;
+    }
+
+.media-badge {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
 }
 
 .message-time {

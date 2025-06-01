@@ -4,6 +4,9 @@ namespace InTouch.MVC.ViewModels;
 
 public class UploadMusicViewModel
 {
+    [Display(Name = "Artist")]
+    public string Artist { get; set; }
+
     [Required]
     [Display(Name = "Title")]
     public string Title { get; set; }
@@ -19,5 +22,5 @@ public class UploadMusicViewModel
     public IFormFile MusicFile { get; set; }
 
     [Display(Name = "Cover Image (Optional)")]
-    public IFormFile CoverFile { get; set; }
+    public IFormFile? CoverFile { get; set; }
 }

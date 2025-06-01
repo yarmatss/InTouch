@@ -35,7 +35,7 @@ public class VideosController : Controller
     }
 
     // GET: /Videos/User/userId
-    public async Task<IActionResult> UserMusic(string userId)
+    public async Task<IActionResult> UserVideos(string userId)
     {
         if (string.IsNullOrEmpty(userId))
         {
@@ -48,15 +48,17 @@ public class VideosController : Controller
             return NotFound();
         }
 
-        var videos = await _videoService.GetUserVideosAsync(userId);
-
-        var viewModel = new UserVideosViewModel
+        try
         {
-            User = user,
-            Videos = videos
-        };
-
-        return View(viewModel);
+            var videos = await _videoService.GetUserVideosAsync(userId);
+            return PartialView("_UserVideoList", videos);
+        }
+        catch (Exception ex)
+        {
+            // Log the error
+            Console.WriteLine($"Error in UserVideos: {ex.Message}");
+            return Content(""); // Return empty content that will be handled by our JS
+        }
     }
 
     // GET: /Videos/Details/5

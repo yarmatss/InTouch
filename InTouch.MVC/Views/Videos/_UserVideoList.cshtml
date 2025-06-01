@@ -1,0 +1,41 @@
+﻿@model IEnumerable<InTouch.MVC.Models.Video>
+
+@if (Model != null && Model.Any())
+{
+    <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+        @foreach (var video in Model)
+        {
+            <div class="col">
+                <div class="card shadow-sm h-100">
+                    <div class="position-relative">
+                        <img src="@(string.IsNullOrEmpty(video.ThumbnailUrl) ? "/images/default-video-thumbnail.jpg" : video.ThumbnailUrl)"
+                             class="card-img-top" alt="@video.Title" style="height: 180px; object-fit: cover;">
+                        <a asp-controller="Videos" asp-action="Details" asp-route-id="@video.Id"
+                           class="position-absolute top-50 start-50 translate-middle text-white">
+                            <i class="bi bi-play-circle" style="font-size: 3rem; text-shadow: 0 0 5px rgba(0,0,0,0.5);"></i>
+                        </a>
+                        <span class="position-absolute bottom-0 end-0 bg-dark text-white px-2 py-1 m-2 rounded">
+                            <i class="bi bi-eye"></i> @video.Views
+                        </span>
+                    </div>
+                    <div class="card-body">
+                        <h5 class="card-title">
+                            <a asp-controller="Videos" asp-action="Details" asp-route-id="@video.Id" class="text-decoration-none">
+                                @video.Title
+                            </a>
+                        </h5>
+                        <p class="card-text text-muted small mb-0">
+                            <i class="bi bi-calendar3"></i> @video.UploadDate.ToLocalTimeString("MMM d, yyyy", "en-US")
+                        </p>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+}
+else
+{
+    <div class="alert alert-info">
+        No videos to display.
+    </div>
+}

@@ -23,10 +23,19 @@ public class MusicService : IMusicService
         {
             return await query.OrderBy(m => m.Genre).ToListAsync();
         }
+        else if (sortBy == "artist")
+        {
+            return await query
+                .OrderBy(m => !string.IsNullOrEmpty(m.Artist)) // Non-null artists first
+                .ThenBy(m => m.Artist) // Then sort by artist name
+                .ThenByDescending(m => m.UploadDate)
+                .ToListAsync();
+        }
         else if (sortBy == "user")
         {
             return await query
-                .OrderBy(m => m.User.UserName)
+                .OrderBy(m => m.User.FirstName)
+                .ThenBy(m => m.User.LastName)
                 .ThenByDescending(m => m.UploadDate)
                 .ToListAsync();
         }
@@ -52,7 +61,8 @@ public class MusicService : IMusicService
             .FirstOrDefaultAsync(m => m.Id == id);
     }
 
-    public async Task<Music> UploadMusicAsync(string userId, string title, string description, string genre, IFormFile musicFile, IFormFile coverFile = null)
+    public async Task<Music> UploadMusicAsync(string userId, string title, string artist, string description, 
+                                                string genre, IFormFile musicFile, IFormFile coverFile = null)
     {
         if (musicFile == null || musicFile.Length == 0)
         {
@@ -83,6 +93,7 @@ public class MusicService : IMusicService
         var music = new Music
         {
             Title = title,
+            Artist = artist,
             Description = description,
             Genre = genre,
             MusicUrl = musicUrl,

@@ -1,4 +1,5 @@
 ﻿@model IEnumerable<InTouch.MVC.Models.Post>
+@inject UserManager<ApplicationUser> UserManager
 @{
     ViewData["Title"] = "Feed";
 }
@@ -33,50 +34,7 @@
         {
             foreach (var post in Model)
             {
-                <div class="card mb-3 shadow-sm">
-                    <div class="card-header bg-white">
-                        <div class="d-flex align-items-center">
-                            <img src="@(string.IsNullOrEmpty(post.User?.ProfilePicture) ? "/images/default-profile.jpg" : post.User.ProfilePicture)"
-                                 class="rounded-circle me-2" alt="Profile" style="width: 40px; height: 40px; object-fit: cover;" />
-                            <div>
-                                <a asp-controller="Account" asp-action="ViewProfile" asp-route-id="@post.UserId" class="text-decoration-none fw-bold">
-                                    @(post.User != null ? $"{post.User.FirstName} {post.User.LastName}" : "Unknown User")
-                                </a>
-                                <div class="text-muted small">@post.CreatedAt.ToLocalTimeString("MMM d, yyyy HH:mm", "en-US")</div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="card-body">
-                        <p class="card-text">@post.Content</p>
-
-                        @if (!string.IsNullOrEmpty(post.MediaUrl))
-                        {
-                            <div class="mt-2">
-                                @if (post.MediaType == MediaType.Image)
-                                {
-                                    <img src="@post.MediaUrl" class="img-fluid rounded" alt="Post image" />
-                                }
-                                else
-                                {
-                                    <video controls class="w-100 rounded">
-                                        <source src="@post.MediaUrl" type="video/mp4">
-                                        Your browser does not support the video tag.
-                                    </video>
-                                }
-                            </div>
-                        }
-
-                        <div class="d-flex justify-content-between align-items-center mt-3">
-                            <div>
-                                <span class="me-2"><i class="bi bi-hand-thumbs-up"></i> @post.Likes.Count</span>
-                                <span><i class="bi bi-chat"></i> @post.Comments.Count</span>
-                            </div>
-                            <a asp-controller="Posts" asp-action="Details" asp-route-id="@post.Id" class="btn btn-sm btn-outline-primary">
-                                View Details
-                            </a>
-                        </div>
-                    </div>
-                </div>
+                <partial name="_PostItem" model="post" />
             }
         }
         else
@@ -102,3 +60,7 @@
         </div>
     </div>
 </div>
+
+@section Scripts {
+    <script src="~/js/post-interactions.js"></script>
+}

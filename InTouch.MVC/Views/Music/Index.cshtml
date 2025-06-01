@@ -22,8 +22,11 @@
                             case "genre":
                                 <span>By Genre</span>
                                 break;
-                            case "user":
+                            case "artist":
                                 <span>By Artist</span>
+                                break;
+                            case "user":
+                                <span>By Uploader</span>
                                 break;
                             default:
                                 <span>Most Recent</span>
@@ -40,8 +43,12 @@
                                asp-action="Index" asp-route-sortBy="genre">By Genre</a>
                         </li>
                         <li>
+                            <a class="dropdown-item @(Model.SortBy == "artist" ? "active" : "")"
+                               asp-action="Index" asp-route-sortBy="artist">By Artist</a>
+                        </li>
+                        <li>
                             <a class="dropdown-item @(Model.SortBy == "user" ? "active" : "")"
-                               asp-action="Index" asp-route-sortBy="user">By Artist</a>
+                               asp-action="Index" asp-route-sortBy="user">By Uploader</a>
                         </li>
                     </ul>
                 </div>
@@ -55,44 +62,7 @@
             @foreach (var track in Model.Music)
             {
                 <div class="col">
-                    <div class="card shadow-sm h-100">
-                        <div class="row g-0">
-                            <div class="col-4">
-                                <img src="@(string.IsNullOrEmpty(track.CoverUrl) ? "/images/default-music-cover.jpg" : track.CoverUrl)"
-                                     class="img-fluid rounded-start" alt="@track.Title" style="height: 100%; object-fit: cover;">
-                            </div>
-                            <div class="col-8">
-                                <div class="card-body">
-                                    <h5 class="card-title mb-1">
-                                        <a asp-action="Details" asp-route-id="@track.Id" class="text-decoration-none">
-                                            @track.Title
-                                        </a>
-                                    </h5>
-                                    <p class="card-text mb-2">
-                                        <a asp-controller="Account" asp-action="ViewProfile" asp-route-id="@track.UserId" class="text-decoration-none">
-                                            @(track.User != null ? $"{track.User.FirstName} {track.User.LastName}" : "Unknown Artist")
-                                        </a>
-                                    </p>
-                                    @if (!string.IsNullOrEmpty(track.Genre))
-                                    {
-                                        <p class="card-text mb-2">
-                                            <span class="badge bg-secondary">@track.Genre</span>
-                                        </p>
-                                    }
-                                    <p class="card-text">
-                                        <small class="text-muted">
-                                            <i class="bi bi-calendar3"></i> @track.UploadDate.ToString("MMM d, yyyy")
-                                        </small>
-                                    </p>
-
-                                    <audio controls class="w-100 mt-2">
-                                        <source src="@track.MusicUrl" type="audio/mpeg">
-                                        Your browser does not support the audio element.
-                                    </audio>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                    <partial name="_MusicCard" model="track" />
                 </div>
             }
         </div>

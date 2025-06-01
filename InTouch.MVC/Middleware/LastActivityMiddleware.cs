@@ -2,7 +2,7 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Caching.Memory;
 
-namespace InTouch.MVC.Services;
+namespace InTouch.MVC.Middleware;
 
 public class LastActivityMiddleware
 {

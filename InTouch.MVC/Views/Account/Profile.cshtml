@@ -253,38 +253,186 @@
 
 @section Scripts {
     <script>
+        // Keep existing tab loading functions
         $(document).ready(function() {
-            // Load user videos when videos tab is clicked
-            $('#videos-tab').on('click', function() {
-                if ($('#user-videos').children('.spinner-border').length > 0) {
+            // Function to handle loading content with proper error handling
+            function loadTabContent(tabId, url, containerId) {
+                // Existing function code
+                if ($(containerId).find('.spinner-border').length > 0) {
+                    console.log(`Loading ${tabId} content...`);
+
                     $.ajax({
-                        url: '@Url.Action("UserVideos", "Videos", new { userId = Model.Id })',
+                        url: url,
                         type: 'GET',
+                        timeout: 10000, // 10 second timeout
                         success: function(data) {
-                            $('#user-videos').html(data);
+                            console.log(`${tabId} content loaded successfully`);
+
+                            // Always replace content, even if empty
+                            if (!data || data.trim().length === 0) {
+                                $(containerId).html('<div class="alert alert-info">No content to display.</div>');
+                            } else {
+                                $(containerId).html(data);
+                            }
                         },
-                        error: function() {
-                            $('#user-videos').html('<div class="alert alert-danger">Failed to load videos.</div>');
+                        error: function(xhr, status, error) {
+                            console.error(`Error loading ${tabId} content:`, status, error);
+                            $(containerId).html(
+                                '<div class="alert alert-danger">' +
+                                    '<p>Failed to load content.</p>' +
+                                    '<button class="btn btn-sm btn-outline-primary mt-2" onclick="location.reload()">Refresh Page</button>' +
+                                '</div>'
+                            );
+                        },
+                        complete: function() {
+                            // This will ALWAYS run, ensuring spinner is removed
+                            $(containerId).find('.spinner-border').remove();
                         }
                     });
                 }
+            }
+
+            // Load user videos when videos tab is clicked
+            $('#videos-tab').on('click', function() {
+                loadTabContent(
+                    'videos',
+                    '@Url.Action("UserVideos", "Videos", new { userId = Model.Id })',
+                    '#user-videos'
+                );
             });
 
             // Load user music when music tab is clicked
             $('#music-tab').on('click', function() {
-                if ($('#user-music').children('.spinner-border').length > 0) {
-                    $.ajax({
-                        url: '@Url.Action("UserMusic", "Music", new { userId = Model.Id })',
-                        type: 'GET',
-                        success: function(data) {
-                            $('#user-music').html(data);
-                        },
-                        error: function() {
-                            $('#user-music').html('<div class="alert alert-danger">Failed to load music.</div>');
-                        }
-                    });
+                loadTabContent(
+                    'music',
+                    '@Url.Action("UserMusic", "Music", new { userId = Model.Id })',
+                    '#user-music'
+                );
+            });
+
+            // Add event listener for Enter key in comment inputs
+            $(document).on('keypress', 'input[id^="comment-input-"]', function(e) {
+                // Check if Enter key was pressed
+                if (e.which === 13) {
+                    e.preventDefault(); // Prevent form submission or line break
+
+                    // Extract post ID from input field ID
+                    const postId = this.id.replace('comment-input-', '');
+
+                    // Call the same function that the button click uses
+                    addComment(postId);
                 }
             });
         });
+
+        // Add like functionality
+        function toggleLike(postId, button) {
+            if (!postId) return;
+
+            const isLiked = $(button).data('liked') === true;
+            const url = isLiked ? '/Posts/Unlike/' + postId : '/Posts/Like/' + postId;
+
+            $.ajax({
+                url: url,
+                type: 'POST',
+                success: function (response) {
+                    if (response.success) {
+                        // Update like count
+                        const likeCountElement = $(button).find('.like-count');
+                        let likeCount = parseInt(likeCountElement.text());
+
+                        if (isLiked) {
+                            // Unlike
+                            likeCount = Math.max(0, likeCount - 1);
+                            $(button).removeClass('text-primary').addClass('text-muted');
+                            $(button).find('i').removeClass('bi-hand-thumbs-up-fill').addClass('bi-hand-thumbs-up');
+                            $(button).data('liked', false);
+                        } else {
+                            // Like
+                            likeCount++;
+                            $(button).removeClass('text-muted').addClass('text-primary');
+                            $(button).find('i').removeClass('bi-hand-thumbs-up').addClass('bi-hand-thumbs-up-fill');
+                            $(button).data('liked', true);
+                        }
+
+                        likeCountElement.text(likeCount);
+                    }
+                },
+                error: function () {
+                    alert('Unable to process your request. Please try again.');
+                }
+            });
+        }
+
+        // Add comment functionality
+        function toggleCommentForm(postId) {
+            const commentSection = $('#comment-section-' + postId);
+            commentSection.slideToggle(200);
+
+            // Focus on the input if opening
+            if (commentSection.is(':hidden')) {
+                setTimeout(() => {
+                    $('#comment-input-' + postId).focus();
+                }, 250);
+            }
+        }
+
+        function addComment(postId) {
+            const commentInput = $('#comment-input-' + postId);
+            const content = commentInput.val().trim();
+
+            if (!content) return;
+
+            $.ajax({
+                url: '/Posts/AddComment',
+                type: 'POST',
+                data: {
+                    postId: postId,
+                    content: content
+                },
+                success: function (response) {
+                    if (response.success) {
+                        // Create new comment element
+                        const commentHtml = `
+                            <div class="d-flex mb-2">
+                                <img src="${response.userProfilePicture}" class="rounded-circle me-2"
+                                    alt="Profile" style="width: 32px; height: 32px; object-fit: cover;">
+                                <div class="bg-light p-2 rounded flex-grow-1">
+                                    <div class="d-flex justify-content-between">
+                                        <a href="/Account/ViewProfile/${response.userId}" class="text-decoration-none fw-bold small">
+                                            ${response.userName}
+                                        </a>
+                                        <small class="text-muted">Just now</small>
+                                    </div>
+                                    <p class="mb-0 small">${response.content}</p>
+                                </div>
+                            </div>
+                        `;
+
+                        // Add to comments section
+                        const existingComments = $('#comment-section-' + postId + ' .existing-comments');
+                        if (existingComments.length) {
+                            existingComments.append(commentHtml);
+                        } else {
+                            $('<div class="existing-comments mb-3"></div>')
+                                .append(commentHtml)
+                                .insertBefore('#comment-section-' + postId + ' .d-flex:last');
+                        }
+
+                        // Update comment count
+                        const commentCountElement = $(`button:contains(${response.commentCount - 1})`).filter(function() {
+                            return $(this).find('i.bi-chat').length > 0;
+                        });
+                        commentCountElement.find('span').text(response.commentCount);
+
+                        // Clear input
+                        commentInput.val('');
+                    }
+                },
+                error: function () {
+                    alert('Unable to add your comment. Please try again.');
+                }
+            });
+        }
     </script>
 }

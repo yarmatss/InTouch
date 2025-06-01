@@ -3,27 +3,21 @@
 
 @{
     var currentUserId = UserManager.GetUserId(User);
-    var hasLiked = Model.Likes.Any(l => l.UserId == currentUserId);
+    var hasLiked = User.Identity.IsAuthenticated && Model.Likes.Any(l => l.UserId == currentUserId);
 }
 
 <div class="card mb-3 shadow-sm">
     <div class="card-header bg-white">
         <div class="d-flex align-items-center">
-            <img src="@(string.IsNullOrEmpty(Model.User?.ProfilePicture) ? "/images/default-profile.jpg" : Model.User?.ProfilePicture)"
+            <img src="@(string.IsNullOrEmpty(Model.User?.ProfilePicture) ? "/images/default-profile.jpg" : Model.User.ProfilePicture)"
                  class="rounded-circle me-2" alt="Profile" style="width: 40px; height: 40px; object-fit: cover;" />
             <div>
                 <a asp-controller="Account" asp-action="ViewProfile" asp-route-id="@Model.UserId" class="text-decoration-none fw-bold">
                     @(Model.User != null ? $"{Model.User.FirstName} {Model.User.LastName}" : "Unknown User")
                 </a>
-                <div class="text-muted small">
-                    @Model.CreatedAt.ToLocalTimeString("MMM d, yyyy HH:mm", "en-US")
-                    @if (Model.UpdatedAt.HasValue)
-                    {
-                        <span class="ms-2">(edited)</span>
-                    }
-                </div>
+                <div class="text-muted small">@Model.CreatedAt.ToLocalTimeString("MMM d, yyyy HH:mm", "en-US")</div>
             </div>
-
+            
             @if (currentUserId == Model.UserId)
             {
                 <div class="dropdown ms-auto">
@@ -35,12 +29,32 @@
                             <a asp-controller="Posts" asp-action="Edit" asp-route-id="@Model.Id" class="dropdown-item">Edit</a>
                         </li>
                         <li>
-                            <form asp-controller="Posts" asp-action="Delete" asp-route-id="@Model.Id" method="post"
-                                  onsubmit="return confirm('Are you sure you want to delete this post?');">
-                                <button type="submit" class="dropdown-item text-danger">Delete</button>
-                            </form>
+                            <button type="button" class="dropdown-item text-danger" data-bs-toggle="modal" data-bs-target="#deleteModal-@Model.Id">
+                                Delete
+                            </button>
                         </li>
                     </ul>
+                </div>
+                
+                <!-- Delete Modal -->
+                <div class="modal fade" id="deleteModal-@Model.Id" tabindex="-1" aria-labelledby="deleteModalLabel-@Model.Id" aria-hidden="true">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title" id="deleteModalLabel-@Model.Id">Delete Post</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body">
+                                <p>Are you sure you want to delete this post? This action cannot be undone.</p>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                <form asp-controller="Posts" asp-action="Delete" asp-route-id="@Model.Id" method="post">
+                                    <button type="submit" class="btn btn-danger">Delete</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             }
         </div>
@@ -50,56 +64,111 @@
 
         @if (!string.IsNullOrEmpty(Model.MediaUrl))
         {
-            <div class="mt-2">
+            <div class="mt-2 media-container">
                 @if (Model.MediaType == MediaType.Image)
                 {
-                    <img src="@Model.MediaUrl" class="img-fluid rounded" alt="Post image" />
+                    <div class="position-relative">
+                        <img src="@Model.MediaUrl" class="post-image" alt="Post image" />
+                        @if (Model.MediaUrl.EndsWith(".gif"))
+                        {
+                            <span class="badge bg-dark media-badge">GIF</span>
+                        }
+                    </div>
                 }
                 else
                 {
-                    <video controls class="w-100 rounded">
-                        <source src="@Model.MediaUrl" type="video/mp4">
-                        Your browser does not support the video tag.
-                    </video>
+                    <div class="video-container ratio ratio-16x9">
+                        <video controls>
+                            <source src="@Model.MediaUrl" type="video/mp4">
+                            Your browser does not support the video tag.
+                        </video>
+                    </div>
                 }
             </div>
         }
 
         <div class="d-flex justify-content-between align-items-center mt-3">
             <div>
-                <span class="me-2"><i class="bi bi-hand-thumbs-up"></i> @Model.Likes.Count</span>
-                <span><i class="bi bi-chat"></i> @Model.Comments.Count</span>
+                @if (User.Identity.IsAuthenticated)
+                {
+                    <button class="btn btn-sm me-2 @(hasLiked ? "text-primary" : "text-muted")"
+                            onclick="toggleLike(@Model.Id, this)"
+                            data-liked="@hasLiked.ToString().ToLower()">
+                        <i class="bi @(hasLiked ? "bi-hand-thumbs-up-fill" : "bi-hand-thumbs-up")"></i>
+                        <span class="like-count">@Model.Likes.Count</span>
+                    </button>
+                    <button class="btn btn-sm text-muted" onclick="toggleCommentForm(@Model.Id)">
+                        <i class="bi bi-chat"></i>
+                        <span>@Model.Comments.Count</span>
+                    </button>
+                }
+                else
+                {
+                    <span class="me-3"><i class="bi bi-hand-thumbs-up"></i> @Model.Likes.Count</span>
+                    <span><i class="bi bi-chat"></i> @Model.Comments.Count</span>
+                }
             </div>
             <a asp-controller="Posts" asp-action="Details" asp-route-id="@Model.Id" class="btn btn-sm btn-outline-primary">
                 View Details
             </a>
         </div>
-    </div>
-    <div class="card-footer bg-white">
-        <div class="d-flex">
-            @if (User.Identity!.IsAuthenticated)
+
+        <!-- Comment section - initially hidden -->
+        <div id="comment-section-@Model.Id" class="comment-section mt-3" style="display: none;">
+            <hr class="my-2">
+
+            <!-- Show existing comments (if any) -->
+            @if (Model.Comments.Any())
             {
-                if (!hasLiked)
-                {
-                    <form asp-controller="Posts" asp-action="Like" asp-route-id="@Model.Id" method="post" class="me-3">
-                        <button type="submit" class="btn btn-link text-decoration-none p-0">
-                            <i class="bi bi-hand-thumbs-up"></i> Like
-                        </button>
-                    </form>
-                }
-                else
-                {
-                    <form asp-controller="Posts" asp-action="Unlike" asp-route-id="@Model.Id" method="post" class="me-3">
-                        <button type="submit" class="btn btn-link text-decoration-none p-0 text-primary">
-                            <i class="bi bi-hand-thumbs-up-fill"></i> Liked
-                        </button>
-                    </form>
-                }
+                <div class="existing-comments mb-3">
+                    @foreach (var comment in Model.Comments.OrderBy(c => c.CreatedAt).Take(3))
+                    {
+                        <div class="d-flex mb-2">
+                            <img src="@(string.IsNullOrEmpty(comment.User?.ProfilePicture) ? "/images/default-profile.jpg" : comment.User?.ProfilePicture)"
+                                 class="rounded-circle me-2" alt="Profile" style="width: 32px; height: 32px; object-fit: cover;">
+                            <div class="bg-light p-2 rounded flex-grow-1">
+                                <div class="d-flex justify-content-between">
+                                    <a asp-controller="Account" asp-action="ViewProfile" asp-route-id="@comment.UserId" class="text-decoration-none fw-bold small">
+                                        @(comment.User != null ? $"{comment.User.FirstName} {comment.User.LastName}" : "Unknown User")
+                                    </a>
+                                    <small class="text-muted">@comment.CreatedAt.ToLocalTimeString("MMM d, HH:mm", "en-US")</small>
+                                </div>
+                                <p class="mb-0 small">@comment.Content</p>
+                            </div>
+                        </div>
+                    }
+
+                    @if (Model.Comments.Count > 3)
+                    {
+                        <div class="text-center">
+                            <a asp-controller="Posts" asp-action="Details" asp-route-id="@Model.Id" class="small">
+                                View all @Model.Comments.Count comments
+                            </a>
+                        </div>
+                    }
+                </div>
             }
 
-            <a asp-controller="Posts" asp-action="Details" asp-route-id="@Model.Id" class="btn btn-link text-decoration-none p-0">
-                <i class="bi bi-chat"></i> Comment
-            </a>
+            <!-- Comment form -->
+            @if (User.Identity.IsAuthenticated)
+            {
+                <div class="d-flex">
+                    <img src="@(string.IsNullOrEmpty(UserManager.GetUserAsync(User).Result?.ProfilePicture) ? "/images/default-profile.jpg" : UserManager.GetUserAsync(User).Result.ProfilePicture)"
+                         class="rounded-circle me-2" alt="Profile" style="width: 32px; height: 32px; object-fit: cover;">
+                    <div class="flex-grow-1">
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="comment-input-@Model.Id" placeholder="Write a comment...">
+                            <button class="btn btn-primary" onclick="addComment(@Model.Id)">
+                                <i class="bi bi-send"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            }
+            else
+            {
+                <p class="small text-muted">Please <a asp-controller="Account" asp-action="Login">log in</a> to comment.</p>
+            }
         </div>
     </div>
 </div>

@@ -35,11 +35,11 @@ public class MusicController : Controller
     }
 
     // GET: /Music/User/userId
-    public async Task<IActionResult> UserMusic(string userId)
+    public async Task<IActionResult> User(string userId)
     {
         if (string.IsNullOrEmpty(userId))
         {
-            return BadRequest();
+            return RedirectToAction(nameof(Index));
         }
 
         var user = await _userManager.FindByIdAsync(userId);
@@ -49,7 +49,6 @@ public class MusicController : Controller
         }
 
         var music = await _musicService.GetUserMusicAsync(userId);
-
         var viewModel = new UserMusicViewModel
         {
             User = user,
@@ -57,6 +56,28 @@ public class MusicController : Controller
         };
 
         return View(viewModel);
+    }
+
+    // AJAX endpoint for getting user music for profile tabs
+    [HttpGet]
+    public async Task<IActionResult> UserMusic(string userId)
+    {
+        if (string.IsNullOrEmpty(userId))
+        {
+            return BadRequest();
+        }
+
+        try
+        {
+            var music = await _musicService.GetUserMusicAsync(userId);
+            return PartialView("_UserMusicList", music);
+        }
+        catch (Exception ex)
+        {
+            // Log the error
+            Console.WriteLine($"Error in UserMusic: {ex.Message}");
+            return Content(""); // Return empty content that will be handled by our JS
+        }
     }
 
     // GET: /Music/Details/5
@@ -92,6 +113,7 @@ public class MusicController : Controller
             var music = await _musicService.UploadMusicAsync(
                 currentUser.Id,
                 model.Title,
+                model.Artist,
                 model.Description,
                 model.Genre,
                 model.MusicFile,

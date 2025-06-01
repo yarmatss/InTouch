@@ -15,9 +15,16 @@
                         <div asp-validation-summary="ModelOnly" class="text-danger"></div>
 
                         <div class="mb-3">
-                            <label asp-for="Title" class="form-label"></label>
-                            <input asp-for="Title" class="form-control" />
+                            <label asp-for="Title" class="form-label">Track Title</label>
+                            <input asp-for="Title" class="form-control" placeholder="Enter the title of your track" />
                             <span asp-validation-for="Title" class="text-danger"></span>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="Artist" class="form-label">Artist Name</label>
+                            <input asp-for="Artist" class="form-control" placeholder="Name of artist or band" />
+                            <div class="form-text">Enter the name of the artist who created this music. Leave blank if you are the artist.</div>
+                            <span asp-validation-for="Artist" class="text-danger"></span>
                         </div>
 
                         <div class="row mb-3">
@@ -27,7 +34,7 @@
                                 <span asp-validation-for="Genre" class="text-danger"></span>
                             </div>
                             <div class="col-md-6">
-                                <label asp-for="MusicFile" class="form-label"></label>
+                                <label asp-for="MusicFile" class="form-label">Music File</label>
                                 <input asp-for="MusicFile" class="form-control" type="file" accept="audio/*" />
                                 <div class="form-text">Accepted formats: MP3, WAV, OGG (max size: 20MB)</div>
                                 <span asp-validation-for="MusicFile" class="text-danger"></span>
@@ -35,16 +42,15 @@
                         </div>
 
                         <div class="mb-3">
-                            <label asp-for="Description" class="form-label"></label>
+                            <label asp-for="Description" class="form-label">Description</label>
                             <textarea asp-for="Description" class="form-control" rows="3" placeholder="Tell others about your track"></textarea>
                             <span asp-validation-for="Description" class="text-danger"></span>
                         </div>
 
                         <div class="mb-4">
-                            <label asp-for="CoverFile" class="form-label"></label>
+                            <label asp-for="CoverFile" class="form-label">Cover Image</label>
                             <input asp-for="CoverFile" class="form-control" type="file" accept="image/*" />
                             <div class="form-text">Upload a cover image (optional)</div>
-                            <span asp-validation-for="CoverFile" class="text-danger"></span>
                         </div>
 
                         <div id="coverPreviewContainer" class="mb-3" style="display: none;">

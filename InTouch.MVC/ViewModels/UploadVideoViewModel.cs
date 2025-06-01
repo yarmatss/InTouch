@@ -16,5 +16,5 @@ public class UploadVideoViewModel
     public IFormFile VideoFile { get; set; }
 
     [Display(Name = "Thumbnail (Optional)")]
-    public IFormFile ThumbnailFile { get; set; }
+    public IFormFile? ThumbnailFile { get; set; }
 }

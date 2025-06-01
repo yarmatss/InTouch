@@ -54,93 +54,83 @@
 
                 @if (!string.IsNullOrEmpty(Model.MediaUrl))
                 {
-                    <div class="mt-3">
+                    <div class="mt-2 media-container">
                         @if (Model.MediaType == MediaType.Image)
                         {
-                            <img src="@Model.MediaUrl" class="img-fluid rounded" alt="Post image" />
+                            <div class="position-relative">
+                                <img src="@Model.MediaUrl" class="post-image" alt="Post image" />
+                                @if (Model.MediaUrl.EndsWith(".gif"))
+                                {
+                                    <span class="badge bg-dark media-badge">GIF</span>
+                                }
+                            </div>
                         }
                         else
                         {
-                            <video controls class="w-100 rounded">
-                                <source src="@Model.MediaUrl" type="video/mp4">
-                                Your browser does not support the video tag.
-                            </video>
+                            <div class="video-container ratio ratio-16x9">
+                                <video controls>
+                                    <source src="@Model.MediaUrl" type="video/mp4">
+                                    Your browser does not support the video tag.
+                                </video>
+                            </div>
                         }
                     </div>
                 }
             </div>
             <div class="card-footer bg-white">
                 <div class="d-flex align-items-center mb-3">
-                    <div class="me-3">
-                        <span class="me-1"><i class="bi bi-hand-thumbs-up-fill text-primary"></i></span>
-                        <span id="likesCount">@Model.Likes.Count</span> likes
-                    </div>
-                    <div>
-                        <span class="me-1"><i class="bi bi-chat-text"></i></span>
-                        <span>@Model.Comments.Count</span> comments
-                    </div>
-                </div>
-
-                <div class="border-top border-bottom py-2 d-flex">
                     @if (User.Identity!.IsAuthenticated)
                     {
-                        if (!hasLiked)
-                        {
-                            <form asp-action="Like" asp-route-id="@Model.Id" method="post" class="me-3">
-                                <button type="submit" class="btn btn-link text-decoration-none p-0">
-                                    <i class="bi bi-hand-thumbs-up"></i> Like
-                                </button>
-                            </form>
-                        }
-                        else
-                        {
-                            <form asp-action="Unlike" asp-route-id="@Model.Id" method="post" class="me-3">
-                                <button type="submit" class="btn btn-link text-decoration-none p-0 text-primary">
-                                    <i class="bi bi-hand-thumbs-up-fill"></i> Liked
-                                </button>
-                            </form>
-                        }
+                        <div class="me-3 like-stats" style="cursor: pointer;" onclick="toggleLike(@Model.Id, this)" data-liked="@hasLiked.ToString().ToLower()">
+                            <span class="me-1">
+                                <i class="bi @(hasLiked ? "bi-hand-thumbs-up-fill text-primary" : "bi-hand-thumbs-up")"></i>
+                            </span>
+                            <span id="likesCount">@Model.Likes.Count</span> likes
+                        </div>
                     }
-
-                    <button type="button" class="btn btn-link text-decoration-none p-0" onclick="focusCommentInput()">
-                        <i class="bi bi-chat"></i> Comment
-                    </button>
+                    else
+                    {
+                        <div class="me-3">
+                            <span class="me-1"><i class="bi bi-hand-thumbs-up"></i></span>
+                            <span id="likesCount">@Model.Likes.Count</span> likes
+                        </div>
+                    }
+                    <div>
+                        <span class="me-1"><i class="bi bi-chat-text"></i></span>
+                        <span id="commentsCount">@Model.Comments.Count</span> comments
+                    </div>
                 </div>
 
-                @if (Model.Comments.Any())
-                {
-                    <div class="mt-3">
-                        @foreach (var comment in Model.Comments.OrderBy(c => c.CreatedAt))
-                        {
-                            <div class="d-flex mb-3">
-                                <img src="@(string.IsNullOrEmpty(comment.User?.ProfilePicture) ? "/images/default-profile.jpg" : comment.User.ProfilePicture)"
-                                     class="rounded-circle me-2" alt="Profile" style="width: 32px; height: 32px; object-fit: cover;" />
-                                <div class="flex-grow-1">
-                                    <div class="bg-light p-2 rounded">
-                                        <div class="d-flex justify-content-between align-items-center mb-1">
-                                            <a asp-controller="Account" asp-action="ViewProfile" asp-route-id="@comment.UserId" class="text-decoration-none fw-bold">
-                                                @(comment.User != null ? $"{comment.User.FirstName} {comment.User.LastName}" : "Unknown User")
-                                            </a>
-                                            <small class="text-muted">@comment.CreatedAt.ToLocalTimeString("MMM d, HH:mm tt", "en-US")</small>
-                                        </div>
-                                        <p class="mb-0">@comment.Content</p>
+                <div class="mt-3" id="comments-container">
+                    @foreach (var comment in Model.Comments.OrderBy(c => c.CreatedAt))
+                    {
+                        <div class="d-flex mb-3">
+                            <img src="@(string.IsNullOrEmpty(comment.User?.ProfilePicture) ? "/images/default-profile.jpg" : comment.User.ProfilePicture)"
+                                 class="rounded-circle me-2" alt="Profile" style="width: 32px; height: 32px; object-fit: cover;" />
+                            <div class="flex-grow-1">
+                                <div class="bg-light p-2 rounded">
+                                    <div class="d-flex justify-content-between align-items-center mb-1">
+                                        <a asp-controller="Account" asp-action="ViewProfile" asp-route-id="@comment.UserId" class="text-decoration-none fw-bold">
+                                            @(comment.User != null ? $"{comment.User.FirstName} {comment.User.LastName}" : "Unknown User")
+                                        </a>
+                                        <small class="text-muted">@comment.CreatedAt.ToLocalTimeString("MMM d, HH:mm", "en-US")</small>
                                     </div>
+                                    <p class="mb-0">@comment.Content</p>
                                 </div>
                             </div>
-                        }
-                    </div>
-                }
+                        </div>
+                    }
+                </div>
 
                 @if (User.Identity!.IsAuthenticated)
                 {
                     <div class="mt-3">
-                        <form asp-action="AddComment" method="post" id="commentForm">
-                            <input type="hidden" name="postId" value="@Model.Id" />
-                            <div class="input-group">
-                                <input type="text" name="content" id="commentInput" class="form-control" placeholder="Write a comment..." required />
-                                <button class="btn btn-primary" type="submit">Post</button>
-                            </div>
-                        </form>
+                        <div class="input-group">
+                            <input type="text" id="commentInput" class="form-control" placeholder="Write a comment..." data-post-id="@Model.Id" />
+                            <button type="button" class="btn btn-primary" id="comment-submit-btn">
+                                <i class="bi bi-send"></i>
+                            </button>
+                        </div>
                     </div>
                 }
             </div>
@@ -179,9 +169,21 @@
 }
 
 @section Scripts {
+    <script src="~/js/post-interactions.js"></script>
+
     <script>
-        function focusCommentInput() {
-            document.getElementById('commentInput').focus();
-        }
+        // Direct event binding approach instead of using inline onclick
+        $(document).ready(function() {
+            // Remove any existing handler first
+            $('#comment-submit-btn').off('click');
+
+            // Add a new click handler for the comment button
+            $('#comment-submit-btn').on('click', function() {
+                const postId = $('#commentInput').data('post-id');
+                addDetailComment(postId);
+            });
+
+            console.log("Detail page event handlers configured");
+        });
     </script>
 }

@@ -22,7 +22,7 @@
             {
                 foreach (var post in Model)
                 {
-                    <partial name="../Shared/_PostItem" model="post" />
+                    <partial name="_PostItem" model="post" />
                 }
             }
             else
@@ -34,3 +34,7 @@
         </div>
     </div>
 </div>
+
+@section Scripts {
+    <script src="~/js/post-interactions.js"></script>
+}

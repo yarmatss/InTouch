@@ -124,7 +124,13 @@ public class PostsController : Controller
     public async Task<IActionResult> Like(int id)
     {
         var currentUser = await _userManager.GetUserAsync(HttpContext.User);
-        await _postService.LikePostAsync(id, currentUser!.Id);
+        var result = await _postService.LikePostAsync(id, currentUser!.Id);
+
+        if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+        {
+            return Json(new { success = result });
+        }
+
         return RedirectToAction(nameof(Details), new { id });
     }
 
@@ -133,7 +139,13 @@ public class PostsController : Controller
     public async Task<IActionResult> Unlike(int id)
     {
         var currentUser = await _userManager.GetUserAsync(HttpContext.User);
-        await _postService.UnlikePostAsync(id, currentUser!.Id);
+        var result = await _postService.UnlikePostAsync(id, currentUser!.Id);
+
+        if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+        {
+            return Json(new { success = result });
+        }
+
         return RedirectToAction(nameof(Details), new { id });
     }
 
@@ -141,8 +153,30 @@ public class PostsController : Controller
     [HttpPost]
     public async Task<IActionResult> AddComment(int postId, string content)
     {
-        var currentUser = await _userManager.GetUserAsync(HttpContext.User);
-        await _postService.AddCommentAsync(postId, currentUser!.Id, content);
-        return RedirectToAction(nameof(Details), new { id = postId });
+        if (string.IsNullOrEmpty(content))
+        {
+            return Json(new { success = false });
+        }
+
+        var userId = _userManager.GetUserId(User);
+        var comment = await _postService.AddCommentAsync(postId, userId, content);
+
+        if (comment != null) // Check if comment is not null instead of treating it as a boolean
+        {
+            var user = await _userManager.GetUserAsync(User);
+            var post = await _postService.GetPostByIdAsync(postId);
+
+            return Json(new
+            {
+                success = true,
+                userId = userId,
+                userName = $"{user.FirstName} {user.LastName}",
+                userProfilePicture = string.IsNullOrEmpty(user.ProfilePicture) ? "/images/default-profile.jpg" : user.ProfilePicture,
+                content = content,
+                commentCount = post.Comments.Count
+            });
+        }
+
+        return Json(new { success = false });
     }
 }

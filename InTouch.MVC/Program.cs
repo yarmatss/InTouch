@@ -1,5 +1,6 @@
 using InTouch.MVC.Data;
 using InTouch.MVC.Hubs;
+using InTouch.MVC.Middleware;
 using InTouch.MVC.Models;
 using InTouch.MVC.Services;
 using Microsoft.AspNetCore.Identity;
